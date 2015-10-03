@@ -1,0 +1,9 @@
+*.exe
+*.o
+*.gch
+mingw.res
+/bin
+/bin64
+/bin_unix
+/packages
+/.svn
