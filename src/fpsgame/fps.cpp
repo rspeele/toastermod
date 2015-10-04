@@ -1063,8 +1063,9 @@ namespace game
             hudstate::scrh = h;
             hudstate::draw();
         }
-        glPushMatrix();
-        glScalef(h/1800.0f, h/1800.0f, 1);
+        pushhudmatrix();
+        hudmatrix.scale(h/1800.0f, h/1800.0f, 1);
+        flushhudmatrix();
 
         int pw, ph, tw, th, fw, fh;
         if(spectating(player1))
