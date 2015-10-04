@@ -6,6 +6,7 @@ extern void cleargamma();
 
 void cleanup()
 {
+    rawinput::release();
     recorder::stop();
     cleanupserver();
     SDL_ShowCursor(1);
@@ -785,7 +786,8 @@ void checkinput()
 {
     SDL_Event event;
     int lasttype = 0, lastbut = 0;
-    bool mousemoved = false; 
+    bool mousemoved = false;
+    if(rawinput::enabled) rawinput::flush();
     while(events.length() || pollevent(event))
     {
         if(events.length()) event = events.remove(0);
@@ -815,7 +817,12 @@ void checkinput()
                 break;
 
             case SDL_MOUSEMOTION:
-                if(grabinput)
+                if(rawinput::debugrawmouse)
+                {
+                    conoutf("%d sdl mouse motion (%d, %d)",
+                            lastmillis, event.motion.xrel, event.motion.yrel);
+                }
+                if(grabinput && !rawinput::enabled)
                 {
                     int dx = event.motion.xrel, dy = event.motion.yrel;
                     checkmousemotion(dx, dy);
@@ -826,6 +833,7 @@ void checkinput()
 
             case SDL_MOUSEBUTTONDOWN:
             case SDL_MOUSEBUTTONUP:
+                if(rawinput::enabled) break;
                 if(lasttype==event.type && lastbut==event.button.button) break; // why?? get event twice without it
                 keypress(-event.button.button, event.button.state!=0, 0);
                 lasttype = event.type;

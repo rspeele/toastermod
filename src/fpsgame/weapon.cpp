@@ -10,6 +10,7 @@ namespace game
     struct hitmsg
     {
         int target, lifesequence, info1, info2;
+        int headshot;
         ivec dir;
     };
     vector<hitmsg> hits;
@@ -19,30 +20,40 @@ namespace game
 
     ICOMMAND(getweapon, "", (), intret(player1->gunselect));
 
+    void reload(int gun, fpsent *d)
+    {
+        d->reload(gun);
+        d->lastreload = lastmillis;
+        addmsg(N_RELOAD, "rci", d, gun);
+    }
+
     void gunselect(int gun, fpsent *d)
     {
         if(gun!=d->gunselect)
         {
             addmsg(N_GUNSELECT, "rci", d, gun);
             playsound(S_WEAPLOAD, &d->o);
+            d->attackcharge = 0; // forget charge
+            d->lastreload = lastmillis;
         }
         d->gunselect = gun;
     }
 
-    void nextweapon(int dir, bool force = false)
+    void nextweapon(int dir, bool force = false, const char *excludename = NULL)
     {
         if(player1->state!=CS_ALIVE) return;
         dir = (dir < 0 ? NUMGUNS-1 : 1);
         int gun = player1->gunselect;
+        int exclude = excludename ? getweapon(excludename) : -1;
         loopi(NUMGUNS)
         {
             gun = (gun + dir)%NUMGUNS;
-            if(force || player1->ammo[gun]) break;
+            if(gun != exclude && (force || player1->hasammo(gun))) break;
         }
         if(gun != player1->gunselect) gunselect(gun, player1);
         else playsound(S_NOAMMO);
     }
-    ICOMMAND(nextweapon, "ii", (int *dir, int *force), nextweapon(*dir, *force!=0));
+    ICOMMAND(nextweapon, "iis", (int *dir, int *force, char *name), nextweapon(*dir, *force!=0, name));
 
     int getweapon(const char *name)
     {
@@ -56,7 +67,7 @@ namespace game
     {
         int gun = getweapon(name);
         if(player1->state!=CS_ALIVE || gun<GUN_FIST || gun>GUN_PISTOL) return;
-        if(force || player1->ammo[gun]) gunselect(gun, player1);
+        if(force || player1->hasammo(gun)) gunselect(gun, player1);
         else playsound(S_NOAMMO);
     }
     ICOMMAND(setweapon, "si", (char *name, int *force), setweapon(name, *force!=0));
@@ -69,7 +80,7 @@ namespace game
         loopi(numguns)
         {
             int gun = guns[(i+offset)%numguns];
-            if(gun>=0 && gun<NUMGUNS && (force || player1->ammo[gun]))
+            if(gun>=0 && gun<NUMGUNS && (force || player1->hasammo(gun)))
             {
                 gunselect(gun, player1);
                 return;
@@ -89,12 +100,12 @@ namespace game
     {
         if(d->state!=CS_ALIVE) return;
         int s = d->gunselect;
-        if     (s!=GUN_CG     && d->ammo[GUN_CG])     s = GUN_CG;
-        else if(s!=GUN_RL     && d->ammo[GUN_RL])     s = GUN_RL;
-        else if(s!=GUN_SG     && d->ammo[GUN_SG])     s = GUN_SG;
-        else if(s!=GUN_RIFLE  && d->ammo[GUN_RIFLE])  s = GUN_RIFLE;
-        else if(s!=GUN_GL     && d->ammo[GUN_GL])     s = GUN_GL;
-        else if(s!=GUN_PISTOL && d->ammo[GUN_PISTOL]) s = GUN_PISTOL;
+        if     (s!=GUN_CG     && d->hasammo(GUN_CG))     s = GUN_CG;
+        else if(s!=GUN_RL     && d->hasammo(GUN_RL))     s = GUN_RL;
+        else if(s!=GUN_SG     && d->hasammo(GUN_SG))     s = GUN_SG;
+        else if(s!=GUN_RIFLE  && d->hasammo(GUN_RIFLE))  s = GUN_RIFLE;
+        else if(s!=GUN_GL     && d->hasammo(GUN_GL))     s = GUN_GL;
+        else if(s!=GUN_PISTOL && d->hasammo(GUN_PISTOL)) s = GUN_PISTOL;
         else                                          s = GUN_FIST;
 
         gunselect(s, d);
@@ -109,27 +120,65 @@ namespace game
             if(name[0])
             {
                 int gun = getweapon(name);
-                if(gun >= GUN_FIST && gun <= GUN_PISTOL && gun != player1->gunselect && player1->ammo[gun]) { gunselect(gun, player1); return; }
+                if(gun >= GUN_FIST && gun <= GUN_PISTOL && gun != player1->gunselect && player1->hasammo(gun)) { gunselect(gun, player1); return; }
             } else { weaponswitch(player1); return; }
         }
         playsound(S_NOAMMO);
     });
 
+    void fixedoffset(const vec &from, const vec &to, const vec &offset, float endrange, vec &dest)
+    {
+        dest = to;
+        dest.add(vec(offset).mul(to.dist(from)/1024.0f));
+        vec dir(dest);
+        dir.sub(from);
+        dir.normalize();
+        raycubepos(from, dir, dest, endrange, RAY_CLIPMAT|RAY_ALPHAPOLY);
+    }
+
+    // offset randomly within a given spread
     void offsetray(const vec &from, const vec &to, int spread, float range, vec &dest)
     {
         vec offset;
         do offset = vec(rndscale(1), rndscale(1), rndscale(1)).sub(0.5f);
         while(offset.squaredlen() > 0.5f*0.5f);
-        offset.mul((to.dist(from)/1024)*spread);
-        offset.z /= 2;
-        dest = vec(offset).add(to);
-        vec dir = vec(dest).sub(from).normalize();
-        raycubepos(from, dir, dest, range, RAY_CLIPMAT|RAY_ALPHAPOLY);
+        offset.mul(spread);
+        fixedoffset(from, to, offset, range, dest);
     }
 
-    void createrays(int gun, const vec &from, const vec &to)             // create random spread of rays
+    // create fixed spread of rays for the shotgun
+    void createrays(int gun, const vec &from, const vec &to)
     {
-        loopi(guns[gun].rays) offsetray(from, to, guns[gun].spread, guns[gun].range, rays[i]);
+        const float ryaw = player1->yaw * RAD;
+        const float rpitch = player1->pitch * RAD;
+        static vec pattern[MAXRAYS];
+        static bool empty = true;
+        if(empty) // generate shotgun pattern
+        {
+            const unsigned int arms = 6;
+            const float spin = 0.25f;
+            const float gap = guns[GUN_SG].spread / ((MAXRAYS - 1) / arms);
+            vec cookie[arms]; // template of a single ring
+            loopi(arms) cookie[i] = vec(1.0f, 0.0f, 0.0f).rotate_around_y(PI * 2 * i / arms);
+            float radius = 0.0f, rotation = 0.0f;
+            pattern[0] = vec(0, 0, 0);
+            loopi(MAXRAYS)
+            {
+                if(!((i - 1) % arms)) { radius += gap; rotation += spin; }
+                pattern[i] = cookie[i % arms];
+                pattern[i].rotate_around_y(rotation);
+                pattern[i].mul(radius);
+            }
+            empty = false;
+        }
+        static vec offsets[MAXRAYS];
+        loopi(guns[gun].rays)
+        {
+            offsets[i] = pattern[i];
+            offsets[i].rotate_around_x(rpitch);
+            offsets[i].rotate_around_z(ryaw);
+            fixedoffset(from, to, offsets[i], guns[gun].range, rays[i]);
+        }
     }
 
     enum { BNC_GRENADE, BNC_GIBS, BNC_DEBRIS, BNC_BARRELDEBRIS };
@@ -218,7 +267,7 @@ namespace game
             }
             vec old(bnc.o);
             bool stopped = false;
-            if(bnc.bouncetype==BNC_GRENADE) stopped = bounce(&bnc, 0.6f, 0.5f, 0.8f) || (bnc.lifetime -= time)<0;
+            if(bnc.bouncetype==BNC_GRENADE) stopped = bounce(&bnc, 0.65f, 0.5f, 0.8f, bnc.owner, bnc.local) || (bnc.lifetime -= time)<0;
             else
             {
                 // cheaper variable rate physics for debris, gibs, etc.
@@ -233,7 +282,7 @@ namespace game
             {
                 if(bnc.bouncetype==BNC_GRENADE)
                 {
-                    int qdam = guns[GUN_GL].damage*(bnc.owner->quadmillis ? 4 : 1);
+                    int qdam = guns[GUN_GL].damage*(bnc.owner->quad.millis ? 4 : 1);
                     hits.setsize(0);
                     explode(bnc.local, bnc.owner, bnc.o, NULL, qdam, GUN_GL);
                     adddecal(DECAL_SCORCH, bnc.o, vec(0, 0, 1), guns[GUN_GL].exprad/2);
@@ -303,10 +352,12 @@ namespace game
         vec p = d->o;
         p.z += 0.6f*(d->eyeheight + d->aboveeye) - d->eyeheight;
         if(blood) particle_splash(PART_BLOOD, damage/10, 1000, p, 0x60FFFF, 2.96f);
-        if(thirdperson)
+        static const int dmgcolors[] = { 0x00FFFF, 0x7FFF7F, 0xFFFF00, 0xFF7F00, 0xFF3F3F };
+        const int color = dmgcolors[min(damage / 20, (int)(sizeof(dmgcolors) / sizeof(int) - 1))];
+        if(thirdperson && d != player1)
         {
             defformatstring(ds, "%d", damage);
-            particle_textcopy(d->abovehead(), ds, PART_TEXT, 2000, 0xFF4B19, 4.0f, -8);
+            particle_textcopy(d->abovehead(), ds, PART_TEXT, 2000, color, 5.0f, -8, 1024);
         }
     }
 
@@ -326,7 +377,7 @@ namespace game
         loopi(min(damage/25, 40)+1) spawnbouncer(from, vel, d, BNC_GIBS);
     }
 
-    void hit(int damage, dynent *d, fpsent *at, const vec &vel, int gun, float info1, int info2 = 1)
+    void hit(int damage, dynent *d, fpsent *at, const vec &vel, int gun, float info1, int info2 = 1, bool headshot = false)
     {
         if(at==player1 && d!=at)
         {
@@ -337,7 +388,6 @@ namespace game
 
         if(d->type==ENT_INANIMATE)
         {
-            hitmovable(damage, (movable *)d, at, vel, gun);
             return;
         }
 
@@ -348,8 +398,7 @@ namespace game
 
         if(f->type==ENT_AI || !m_mp(gamemode) || f==at) f->hitpush(damage, vel, at, gun);
 
-        if(f->type==ENT_AI) hitmonster(damage, (monster *)f, at, vel, gun);
-        else if(!m_mp(gamemode)) damaged(damage, f, at);
+        if(!m_mp(gamemode)) damaged(damage, f, at);
         else
         {
             hitmsg &h = hits.add();
@@ -357,24 +406,29 @@ namespace game
             h.lifesequence = f->lifesequence;
             h.info1 = int(info1*DMF);
             h.info2 = info2;
-            h.dir = f==at ? ivec(0, 0, 0) : ivec(vec(vel).mul(DNF));
+            h.headshot = headshot;
+            h.dir = f==at ? ivec(0, 0, 0) : ivec(int(vel.x*DNF), int(vel.y*DNF), int(vel.z*DNF));
             if(at==player1)
             {
                 damageeffect(damage, f);
-                if(f==player1)
+                if (lastmillis - player1->lastyelp >= 800)
                 {
-                    damageblend(damage);
-                    damagecompass(damage, at ? at->o : f->o);
-                    playsound(S_PAIN6);
+                    if(f==player1)
+                    {
+                        damageblend(damage);
+                        damagecompass(damage, at ? at->o : f->o);
+                        playsound(S_PAIN6);
+                    }
+                    else playsound(S_PAIN1+rnd(5), &f->o);
+                    player1->lastyelp = lastmillis;
                 }
-                else playsound(S_PAIN1+rnd(5), &f->o);
             }
         }
     }
 
-    void hitpush(int damage, dynent *d, fpsent *at, vec &from, vec &to, int gun, int rays)
+    void hitpush(int damage, dynent *d, fpsent *at, vec &from, vec &to, int gun, int rays, bool headshot = false)
     {
-        hit(damage, d, at, vec(to).sub(from).normalize(), gun, from.dist(to), rays);
+        hit(damage, d, at, vec(to).sub(from).normalize(), gun, from.dist(to), rays, headshot);
     }
 
     float projdist(dynent *o, vec &dir, const vec &v)
@@ -387,6 +441,52 @@ namespace game
         return dist;
     }
 
+    bool intersect(dynent *d, const vec &from, const vec &to, float &dist)   // if lineseg hits entity bounding box
+    {
+        vec bottom(d->o), top(d->o);
+        bottom.z -= d->eyeheight;
+        top.z += d->aboveeye;
+        return linecylinderintersect(from, to, bottom, top, d->radius, dist);
+    }
+
+    VAR(debugexplosions, 0, 0, 1);
+    bool radialobstructed(dynent *d, const vec &from)
+    {
+        const int hres = 4;
+        const int vres = 4;
+        static vec ends[vres*hres];
+        // ray from v to d
+        vec ray(d->o);
+        ray.sub(from);
+        // 2d vector perpendicular to ray
+        vec pr(ray);
+        pr.z = 0;
+        swap(pr.x, pr.y);
+        pr.x = -pr.x;
+        pr.rescale(d->radius);
+        // populate ends
+        const float vstep = (d->aboveeye + d->eyeheight)/vres;
+        vec vertical(d->o);
+        vertical.add(d->aboveeye);
+        vertical.sub(pr);
+        vec hstep(pr);
+        hstep.div(hres / 2);
+        loopi(vres) {
+            loopj(hres) {
+                vec &to = ends[i*vres+j];
+                to = vec(vertical).add(vec(hstep).mul(j));
+                if(debugexplosions) particle_flare(from, to, 5000, PART_STREAK, 0xFFFF00, 0.15f);
+                vec unitv;
+                float dist = to.dist(from, unitv);
+                unitv.div(dist);
+                float barrier = raycube(from, unitv, dist, RAY_CLIPMAT|RAY_ALPHAPOLY);
+                if(barrier >= dist) return false;
+            }
+            vertical.z -= vstep;
+        }
+        return true;
+    }
+
     void radialeffect(dynent *o, const vec &v, int qdam, fpsent *at, int gun)
     {
         if(o->state!=CS_ALIVE) return;
@@ -394,6 +494,7 @@ namespace game
         float dist = projdist(o, dir, v);
         if(dist<guns[gun].exprad)
         {
+            if(radialobstructed(o, v)) return;
             int damage = (int)(qdam*(1-dist/EXP_DISTSCALE/guns[gun].exprad));
             if(o==at) damage /= EXP_SELFDAMDIV;
             hit(damage, o, at, dir, gun, dist);
@@ -410,7 +511,13 @@ namespace game
         else adddynlight(v, 1.15f*guns[gun].exprad, vec(2, 1.5f, 1), 700, 100);
         int numdebris = gun==GUN_BARREL ? rnd(max(maxbarreldebris-5, 1))+5 : rnd(maxdebris-5)+5;
         vec debrisvel = owner->o==v ? vec(0, 0, 0) : vec(owner->o).sub(v).normalize(), debrisorigin(v);
-        if(gun==GUN_RL) debrisorigin.add(vec(debrisvel).mul(8));
+        if(gun==GUN_RL)
+        {
+            debrisorigin.add(vec(debrisvel).mul(8));
+            adddynlight(safe ? v : debrisorigin, 1.15f*guns[gun].exprad, vec(4, 3.0f, 2.0), 700, 100, 0, guns[gun].exprad/2, vec(2.0, 1.5f, 1.0f));
+        }
+        else if(gun==GUN_GL) adddynlight(v, 1.15f*guns[gun].exprad, vec(1.0f, 3.0f, 4.0), 600, 100, 0, 8, vec(0.5f, 2, 2));
+        else adddynlight(v, 1.15f*guns[gun].exprad, vec(2, 1.5f, 1), 700, 100);
         if(numdebris)
         {
             entitylight light;
@@ -430,17 +537,8 @@ namespace game
 
     void projsplash(projectile &p, vec &v, dynent *safe, int damage)
     {
-        if(guns[p.gun].part)
-        {
-            particle_splash(PART_SPARK, 100, 200, v, 0xB49B4B, 0.24f);
-            playsound(S_FEXPLODE, &v);
-            // no push?
-        }
-        else
-        {
-            explode(p.local, p.owner, v, safe, damage, GUN_RL);
-            adddecal(DECAL_SCORCH, v, vec(p.dir).neg(), guns[p.gun].exprad/2);
-        }
+        explode(p.local, p.owner, v, safe, damage, GUN_RL);
+        adddecal(DECAL_SCORCH, v, vec(p.dir).neg(), guns[p.gun].exprad/2);
     }
 
     void explodeeffects(int gun, fpsent *d, bool local, int id)
@@ -500,22 +598,21 @@ namespace game
         {
             projectile &p = projs[i];
             p.offsetmillis = max(p.offsetmillis-time, 0);
-            int qdam = guns[p.gun].damage*(p.owner->quadmillis ? 4 : 1);
-            if(p.owner->type==ENT_AI) qdam /= MONSTERDAMAGEFACTOR;
-            vec dv;
-            float dist = p.to.dist(p.o, dv); 
-            dv.mul(time/max(dist*1000/p.speed, float(time)));
-            vec v = vec(p.o).add(dv);
+            int qdam = guns[p.gun].damage*(p.owner->quad.millis ? 4 : 1);
+            vec v;
+            float dist = p.to.dist(p.o, v);
+            float dtime = dist*1000/p.speed;
+            if(time > dtime) dtime = time;
+            v.mul(time/dtime);
+            v.add(p.o);
             bool exploded = false;
             hits.setsize(0);
             if(p.local)
             {
-                vec halfdv = vec(dv).mul(0.5f), bo = vec(p.o).add(halfdv);
-                float br = max(fabs(halfdv.x), fabs(halfdv.y)) + 1;
                 loopj(numdynents())
                 {
                     dynent *o = iterdynents(j);
-                    if(p.owner==o || o->o.reject(bo, o->radius + br)) continue;
+                    if(p.owner==o || o->o.reject(v, 10.0f)) continue;
                     if(projdamage(o, p, v, qdam)) { exploded = true; break; }
                 }
             }
@@ -527,24 +624,17 @@ namespace game
                     {
                         if(raycubepos(p.o, p.dir, p.to, 0, RAY_CLIPMAT|RAY_ALPHAPOLY)>=4) continue;
                     }
-                    projsplash(p, v, NULL, qdam);
+                    // back up explosion point slightly
+                    vec back(p.dir);
+                    back.mul(-1.5f); // just enough to avoid stairs blocking explosions
+                    projsplash(p, v.add(back), NULL, qdam);
                     exploded = true;
                 }
                 else
                 {
                     vec pos(v);
                     pos.add(vec(p.offset).mul(p.offsetmillis/float(OFFSETMILLIS)));
-                    if(guns[p.gun].part)
-                    {
-                         regular_particle_splash(PART_SMOKE, 2, 300, pos, 0x404040, 0.6f, 150, -20);
-                         int color = 0xFFFFFF;
-                         switch(guns[p.gun].part)
-                         {
-                            case PART_FIREBALL1: color = 0xFFC8C8; break;
-                         }
-                         particle_splash(guns[p.gun].part, 1, 1, pos, color, 4.8f, 150, 20);
-                    }
-                    else regular_particle_splash(PART_SMOKE, 2, 300, pos, 0x404040, 2.4f, 50, -20);
+                    regular_particle_splash(PART_SMOKE, 2, 300, pos, 0x404040, 2.4f, 50, -20);
                 }
             }
             if(exploded)
@@ -563,7 +653,7 @@ namespace game
     VARP(muzzleflash, 0, 1, 1);
     VARP(muzzlelight, 0, 1, 1);
 
-    void shoteffects(int gun, const vec &from, const vec &to, fpsent *d, bool local, int id, int prevaction)     // create visual effect from a shot
+    void shoteffects(int gun, const vec &from, const vec &to, fpsent *d, bool local, int id, int prevaction, const int charge)     // create visual effect from a shot
     {
         int sound = guns[gun].sound, pspeed = 25;
         switch(gun)
@@ -580,10 +670,10 @@ namespace game
                 loopi(guns[gun].rays)
                 {
                     particle_splash(PART_SPARK, 20, 250, rays[i], 0xB49B4B, 0.24f);
-                    particle_flare(hudgunorigin(gun, from, rays[i], d), rays[i], 300, PART_STREAK, 0xFFC864, 0.28f);
+                    particle_flare(hudgunorigin(gun, from, rays[i], d), rays[i], 50, PART_STREAK, 0xFFC864, 0.28f);
                     if(!local) adddecal(DECAL_BULLET, rays[i], vec(from).sub(rays[i]).normalize(), 2.0f);
                 }
-                if(muzzlelight) adddynlight(hudgunorigin(gun, d->o, to, d), 30, vec(0.5f, 0.375f, 0.25f), 100, 100, DL_FLASH, 0, vec(0, 0, 0), d);
+                if(muzzlelight) adddynlight(hudgunorigin(gun, d->o, to, d), 30, vec(1.0f, 0.75f, 0.5f), 100, 100, DL_FLASH, 0, vec(0, 0, 0), d);
                 break;
             }
 
@@ -591,11 +681,11 @@ namespace game
             case GUN_PISTOL:
             {
                 particle_splash(PART_SPARK, 200, 250, to, 0xB49B4B, 0.24f);
-                particle_flare(hudgunorigin(gun, from, to, d), to, 600, PART_STREAK, 0xFFC864, 0.28f);
+                particle_flare(hudgunorigin(gun, from, to, d), to, 100, PART_STREAK, 0xFFC864, 0.28f);
                 if(muzzleflash && d->muzzle.x >= 0)
                     particle_flare(d->muzzle, d->muzzle, gun==GUN_CG ? 100 : 200, PART_MUZZLE_FLASH1, 0xFFFFFF, gun==GUN_CG ? 2.25f : 1.25f, d);
                 if(!local) adddecal(DECAL_BULLET, to, vec(from).sub(to).normalize(), 2.0f);
-                if(muzzlelight) adddynlight(hudgunorigin(gun, d->o, to, d), gun==GUN_CG ? 30 : 15, vec(0.5f, 0.375f, 0.25f), gun==GUN_CG ? 50 : 100, gun==GUN_CG ? 50 : 100, DL_FLASH, 0, vec(0, 0, 0), d);
+                if(muzzlelight) adddynlight(hudgunorigin(gun, d->o, to, d), gun==GUN_CG ? 30 : 15, vec(1.0f, 0.75f, 0.5f), gun==GUN_CG ? 50 : 100, gun==GUN_CG ? 50 : 100, DL_FLASH, 0, vec(0, 0, 0), d);
                 break;
             }
 
@@ -606,7 +696,6 @@ namespace game
             case GUN_ICEBALL:
             case GUN_SLIMEBALL:
                 pspeed = guns[gun].projspeed;
-                if(d->type==ENT_AI) pspeed /= 2;
                 newprojectile(from, to, (float)pspeed, local, id, d, gun);
                 break;
 
@@ -614,11 +703,11 @@ namespace game
             {
                 float dist = from.dist(to);
                 vec up = to;
-                up.z += dist/8;
+                up.z += dist/6;
                 if(muzzleflash && d->muzzle.x >= 0)
                     particle_flare(d->muzzle, d->muzzle, 200, PART_MUZZLE_FLASH2, 0xFFFFFF, 1.5f, d);
-                if(muzzlelight) adddynlight(hudgunorigin(gun, d->o, to, d), 20, vec(0.5f, 0.375f, 0.25f), 100, 100, DL_FLASH, 0, vec(0, 0, 0), d);
-                newbouncer(from, up, local, id, d, BNC_GRENADE, guns[gun].ttl, guns[gun].projspeed);
+                if(muzzlelight) adddynlight(hudgunorigin(gun, d->o, to, d), 20, vec(1.0f, 0.75f, 0.5f), 100, 100, DL_FLASH, 0, vec(0, 0, 0), d);
+                newbouncer(from, up, local, id, d, BNC_GRENADE, guns[gun].ttl, guns[gun].projspeed + charge*0.15f);
                 break;
             }
 
@@ -628,7 +717,7 @@ namespace game
                 if(muzzleflash && d->muzzle.x >= 0)
                     particle_flare(d->muzzle, d->muzzle, 150, PART_MUZZLE_FLASH3, 0xFFFFFF, 1.25f, d);
                 if(!local) adddecal(DECAL_BULLET, to, vec(from).sub(to).normalize(), 3.0f);
-                if(muzzlelight) adddynlight(hudgunorigin(gun, d->o, to, d), 25, vec(0.5f, 0.375f, 0.25f), 75, 75, DL_FLASH, 0, vec(0, 0, 0), d);
+                if(muzzlelight) adddynlight(hudgunorigin(gun, d->o, to, d), 25, vec(1.0f, 0.75f, 0.5f), 75, 75, DL_FLASH, 0, vec(0, 0, 0), d);
                 break;
         }
 
@@ -646,7 +735,7 @@ namespace game
                 playsound(sound, d==hudplayer() ? NULL : &d->o);
                 break;
         }
-        if(d->quadmillis && lastmillis-prevaction>200 && !looped) playsound(S_ITEMPUP, d==hudplayer() ? NULL : &d->o);
+        if(d->quad.millis && lastmillis-prevaction>200 && !looped) playsound(S_ITEMPUP, d==hudplayer() ? NULL : &d->o);
     }
 
     void particletrack(physent *owner, vec &o, vec &d)
@@ -675,13 +764,12 @@ namespace game
     }
 
     float intersectdist = 1e16f;
-
-    bool intersect(dynent *d, const vec &from, const vec &to, float &dist)   // if lineseg hits entity bounding box
+    bool isheadshot(dynent *d, const vec &from, const vec &to, float &dist)
     {
         vec bottom(d->o), top(d->o);
-        bottom.z -= d->eyeheight;
+        bottom.z -= d->beloweye;
         top.z += d->aboveeye;
-        return linecylinderintersect(from, to, bottom, top, d->radius, dist);
+        return linecylinderintersect(from, to, bottom, top, d->headradius, dist);
     }
 
     dynent *intersectclosest(const vec &from, const vec &to, fpsent *at, float &bestdist)
@@ -711,8 +799,7 @@ namespace game
     void raydamage(vec &from, vec &to, fpsent *d)
     {
         int qdam = guns[d->gunselect].damage;
-        if(d->quadmillis) qdam *= 4;
-        if(d->type==ENT_AI) qdam /= MONSTERDAMAGEFACTOR;
+        if(d->quad.millis) qdam *= 4;
         dynent *o;
         float dist;
         if(guns[d->gunselect].rays > 1)
@@ -739,32 +826,72 @@ namespace game
         }
         else if((o = intersectclosest(from, to, d, dist)))
         {
+            if(d->gunselect == GUN_CG) qdam = server::cgdamage(d->o.dist(o->o)) * (d->quad.millis ? 4 : 1);
+            const bool headshot = guns[d->gunselect].bonus && isheadshot(o, from, to, dist);
+            if(headshot) qdam += guns[d->gunselect].bonus;
             shorten(from, to, dist);
-            hitpush(qdam, o, d, from, to, d->gunselect, 1);
+            hitpush(qdam, o, d, from, to, d->gunselect, 1, headshot);
         }
         else if(d->gunselect!=GUN_FIST && d->gunselect!=GUN_BITE) adddecal(DECAL_BULLET, to, vec(from).sub(to).normalize(), d->gunselect==GUN_RIFLE ? 3.0f : 2.0f);
     }
 
+    const bool checkgunwait(fpsent *d)
+    {
+        if(lastmillis-d->lastaction < d->gunwait) return false;
+        d->gunwait = 0;
+        return true;
+    }
+    const bool checkcharge(fpsent *d)
+    {
+        if(d==player1 || d->ai)
+        {
+            if(d->attacking)
+            {
+                if(!d->attackcharge) d->attackcharge = lastmillis;
+                return lastmillis - d->attackcharge >= guns[d->gunselect].charge;
+            }
+            else
+            {
+                return d->attackcharge;
+            }
+        }
+        return true;
+    }
+    const bool checkreload(fpsent * d)
+    {
+        const int gun = d->gunselect;
+        const int capacity = guns[gun].capacity;
+        if(capacity <= 0) return d->ammo[gun] > 0;
+        if(d->magazine[gun] < capacity)
+        {
+            const int reloadtime = lastmillis - max(d->lastaction, d->lastreload);
+            if(d->ammo[gun] && reloadtime >= guns[gun].reloaddelay) reload(gun, d);
+        }
+        return d->magazine[d->gunselect] > 0;
+    }
     void shoot(fpsent *d, const vec &targ)
     {
-        int prevaction = d->lastaction, attacktime = lastmillis-prevaction;
-        if(attacktime<d->gunwait) return;
-        d->gunwait = 0;
-        if((d==player1 || d->ai) && !d->attacking) return;
-        d->lastaction = lastmillis;
-        d->lastattackgun = d->gunselect;
-        if(!d->ammo[d->gunselect])
+        const int prevaction = d->lastaction;
+        const bool isloaded = checkreload(d);
+        if(!checkgunwait(d)) return;
+        if(!isloaded)
         {
-            if(d==player1)
+            if(d->attacking && d==player1 && !d->hasammo(d->gunselect))
             {
                 msgsound(S_NOAMMO, d);
+                d->lastaction = lastmillis;
                 d->gunwait = 600;
                 d->lastattackgun = -1;
                 weaponswitch(d);
             }
             return;
         }
-        if(d->gunselect) d->ammo[d->gunselect]--;
+        if(!checkcharge(d)) return;
+        const int charge = d->attackcharge ? lastmillis - d->attackcharge : 0;
+        d->attackcharge = 0;
+        d->lastaction = lastmillis;
+        d->lastattackgun = d->gunselect;
+        if(d->gunselect) d->ammosource(d->gunselect)--;
         vec from = d->o;
         vec to = targ;
 
@@ -789,11 +916,11 @@ namespace game
 
         if(!guns[d->gunselect].projspeed) raydamage(from, to, d);
 
-        shoteffects(d->gunselect, from, to, d, true, 0, prevaction);
+        shoteffects(d->gunselect, from, to, d, true, 0, prevaction, charge);
 
         if(d==player1 || d->ai)
         {
-            addmsg(N_SHOOT, "rci2i6iv", d, lastmillis-maptime, d->gunselect,
+            addmsg(N_SHOOT, "rci3i6iv", d, lastmillis-maptime, d->gunselect, charge,
                    (int)(from.x*DMF), (int)(from.y*DMF), (int)(from.z*DMF),
                    (int)(to.x*DMF), (int)(to.y*DMF), (int)(to.z*DMF),
                    hits.length(), hits.length()*sizeof(hitmsg)/sizeof(int), hits.getbuf());
@@ -801,7 +928,7 @@ namespace game
 
 		d->gunwait = guns[d->gunselect].attackdelay;
 		if(d->gunselect == GUN_PISTOL && d->ai) d->gunwait += int(d->gunwait*(((101-d->skill)+rnd(111-d->skill))/100.f));
-        d->totalshots += guns[d->gunselect].damage*(d->quadmillis ? 4 : 1)*guns[d->gunselect].rays;
+        d->totalshots += guns[d->gunselect].damage*(d->quad.millis ? 4 : 1)*guns[d->gunselect].rays;
     }
 
     void adddynlights()
@@ -890,6 +1017,7 @@ namespace game
             v.mul(3);
             v.add(pos);
             rendermodel(&p.light, "projectiles/rocket", ANIM_MAPMODEL|ANIM_LOOP, v, yaw, pitch, MDL_CULL_VFC|MDL_CULL_OCCLUDED|MDL_LIGHT|MDL_LIGHT_FAST);
+            particle_fireball(pos, 1.5f, PART_EXPLOSION, 15, 0xFF8080, 1.0f);
         }
     }
 

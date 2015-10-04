@@ -66,7 +66,10 @@ struct fpsentity : extentity
 };
 
 enum { GUN_FIST = 0, GUN_SG, GUN_CG, GUN_RL, GUN_RIFLE, GUN_GL, GUN_PISTOL, GUN_FIREBALL, GUN_ICEBALL, GUN_SLIMEBALL, GUN_BITE, GUN_BARREL, NUMGUNS };
-enum { A_BLUE, A_GREEN, A_YELLOW };     // armour types... take 20/40/60 % off
+#define validgun(g) (*i >= GUN_FIST && *i < NUMGUNS)
+enum { A_BLUE, A_GREEN, A_YELLOW };     // armour types...
+#define armourinfo(a) ((a+1.0f)*0.25f)
+const int armourinfo[] = { 25, 50, 75 };
 enum { M_NONE = 0, M_SEARCH, M_HOME, M_ATTACKING, M_PAIN, M_SLEEP, M_AIMING };  // monster states
 
 enum
@@ -76,21 +79,21 @@ enum
     M_NOAMMO     = 1<<2,
     M_INSTA      = 1<<3,
     M_EFFICIENCY = 1<<4,
-    M_TACTICS    = 1<<5,
-    M_CAPTURE    = 1<<6,
-    M_REGEN      = 1<<7,
-    M_CTF        = 1<<8,
-    M_PROTECT    = 1<<9,
-    M_HOLD       = 1<<10,
-    M_OVERTIME   = 1<<11,
-    M_EDIT       = 1<<12,
-    M_DEMO       = 1<<13,
-    M_LOCAL      = 1<<14,
-    M_LOBBY      = 1<<15,
-    M_DMSP       = 1<<16,
-    M_CLASSICSP  = 1<<17,
-    M_SLOWMO     = 1<<18,
-    M_COLLECT    = 1<<19
+    M_CAPTURE    = 1<<5,
+    M_REGEN      = 1<<6,
+    M_CTF        = 1<<7,
+    M_PROTECT    = 1<<8,
+    M_HOLD       = 1<<9,
+    M_OVERTIME   = 1<<10,
+    M_EDIT       = 1<<11,
+    M_DEMO       = 1<<12,
+    M_LOCAL      = 1<<13,
+    M_LOBBY      = 1<<14,
+    M_DMSP       = 1<<15,
+    M_CLASSICSP  = 1<<16,
+    M_SLOWMO     = 1<<17,
+    M_COLLECT    = 1<<18,
+    M_ELIMINATE  = 1<<19
 };
 
 static struct gamemodeinfo
@@ -110,9 +113,6 @@ static struct gamemodeinfo
     { "insta team", M_NOITEMS | M_INSTA | M_TEAM, "Instagib Team: You spawn with full rifle ammo and die instantly from one shot. There are no items. Frag \fs\f3the enemy team\fr to score points for \fs\f1your team\fr." },
     { "efficiency", M_NOITEMS | M_EFFICIENCY, "Efficiency: You spawn with all weapons and armour. There are no items. Frag everyone to score points." },
     { "effic team", M_NOITEMS | M_EFFICIENCY | M_TEAM, "Efficiency Team: You spawn with all weapons and armour. There are no items. Frag \fs\f3the enemy team\fr to score points for \fs\f1your team\fr." },
-    { "tactics", M_NOITEMS | M_TACTICS, "Tactics: You spawn with two random weapons and armour. There are no items. Frag everyone to score points." },
-    { "tac team", M_NOITEMS | M_TACTICS | M_TEAM, "Tactics Team: You spawn with two random weapons and armour. There are no items. Frag \fs\f3the enemy team\fr to score points for \fs\f1your team\fr." },
-    { "capture", M_NOAMMO | M_TACTICS | M_CAPTURE | M_TEAM, "Capture: Capture neutral bases or steal \fs\f3enemy bases\fr by standing next to them.  \fs\f1Your team\fr scores points for every 10 seconds it holds a base. You spawn with two random weapons and armour. Collect extra ammo that spawns at \fs\f1your bases\fr. There are no ammo items." },
     { "regen capture", M_NOITEMS | M_CAPTURE | M_REGEN | M_TEAM, "Regen Capture: Capture neutral bases or steal \fs\f3enemy bases\fr by standing next to them. \fs\f1Your team\fr scores points for every 10 seconds it holds a base. Regenerate health and ammo by standing next to \fs\f1your bases\fr. There are no items." },
     { "ctf", M_CTF | M_TEAM, "Capture The Flag: Capture \fs\f3the enemy flag\fr and bring it back to \fs\f1your flag\fr to score points for \fs\f1your team\fr. Collect items for ammo." },
     { "insta ctf", M_NOITEMS | M_INSTA | M_CTF | M_TEAM, "Instagib Capture The Flag: Capture \fs\f3the enemy flag\fr and bring it back to \fs\f1your flag\fr to score points for \fs\f1your team\fr. You spawn with full rifle ammo and die instantly from one shot. There are no items." },
@@ -125,7 +125,8 @@ static struct gamemodeinfo
     { "effic hold", M_NOITEMS | M_EFFICIENCY | M_CTF | M_HOLD | M_TEAM, "Efficiency Hold The Flag: Hold \fs\f7the flag\fr for 20 seconds to score points for \fs\f1your team\fr. You spawn with all weapons and armour. There are no items." },
     { "collect", M_COLLECT | M_TEAM, "Skull Collector: Frag \fs\f3the enemy team\fr to drop \fs\f3skulls\fr. Collect them and bring them to \fs\f3the enemy base\fr to score points for \fs\f1your team\fr or steal back \fs\f1your skulls\fr. Collect items for ammo." },
     { "insta collect", M_NOITEMS | M_INSTA | M_COLLECT | M_TEAM, "Instagib Skull Collector: Frag \fs\f3the enemy team\fr to drop \fs\f3skulls\fr. Collect them and bring them to \fs\f3the enemy base\fr to score points for \fs\f1your team\fr or steal back \fs\f1your skulls\fr. You spawn with full rifle ammo and die instantly from one shot. There are no items." },
-    { "effic collect", M_NOITEMS | M_EFFICIENCY | M_COLLECT | M_TEAM, "Efficiency Skull Collector: Frag \fs\f3the enemy team\fr to drop \fs\f3skulls\fr. Collect them and bring them to \fs\f3the enemy base\fr to score points for \fs\f1your team\fr or steal back \fs\f1your skulls\fr. You spawn with all weapons and armour. There are no items." }
+    { "effic collect", M_NOITEMS | M_EFFICIENCY | M_COLLECT | M_TEAM, "Efficiency Skull Collector: Frag \fs\f3the enemy team\fr to drop \fs\f3skulls\fr. Collect them and bring them to \fs\f3the enemy base\fr to score points for \fs\f1your team\fr or steal back \fs\f1your skulls\fr. You spawn with all weapons and armour. There are no items." },
+    { "elimination", M_NOITEMS | M_ELIMINATE | M_TEAM | M_EFFICIENCY, "Eliminate opposing players to score for your team." }
 };
 
 #define STARTGAMEMODE (-3)
@@ -139,7 +140,6 @@ static struct gamemodeinfo
 #define m_noitems      (m_check(gamemode, M_NOITEMS))
 #define m_noammo       (m_check(gamemode, M_NOAMMO|M_NOITEMS))
 #define m_insta        (m_check(gamemode, M_INSTA))
-#define m_tactics      (m_check(gamemode, M_TACTICS))
 #define m_efficiency   (m_check(gamemode, M_EFFICIENCY))
 #define m_capture      (m_check(gamemode, M_CAPTURE))
 #define m_regencapture (m_checkall(gamemode, M_CAPTURE | M_REGEN))
@@ -147,6 +147,7 @@ static struct gamemodeinfo
 #define m_protect      (m_checkall(gamemode, M_CTF | M_PROTECT))
 #define m_hold         (m_checkall(gamemode, M_CTF | M_HOLD))
 #define m_collect      (m_check(gamemode, M_COLLECT))
+#define m_elimination  (m_check(gamemode, M_ELIMINATE))
 #define m_teammode     (m_check(gamemode, M_TEAM))
 #define m_overtime     (m_check(gamemode, M_OVERTIME))
 #define isteam(a,b)    (m_teammode && strcmp(a, b)==0)
@@ -218,14 +219,16 @@ enum { PRIV_NONE = 0, PRIV_MASTER, PRIV_AUTH, PRIV_ADMIN };
 enum
 {
     N_CONNECT = 0, N_SERVINFO, N_WELCOME, N_INITCLIENT, N_POS, N_TEXT, N_SOUND, N_CDIS,
+    N_RELOAD,
     N_SHOOT, N_EXPLODE, N_SUICIDE,
     N_DIED, N_DAMAGE, N_HITPUSH, N_SHOTFX, N_EXPLODEFX,
     N_TRYSPAWN, N_SPAWNSTATE, N_SPAWN, N_FORCEDEATH,
     N_GUNSELECT, N_TAUNT,
+    N_RESTARTVOTE, N_RESTARTGAME,
     N_MAPCHANGE, N_MAPVOTE, N_TEAMINFO, N_ITEMSPAWN, N_ITEMPICKUP, N_ITEMACC, N_TELEPORT, N_JUMPPAD,
     N_PING, N_PONG, N_CLIENTPING,
     N_TIMEUP, N_FORCEINTERMISSION,
-    N_SERVMSG, N_ITEMLIST, N_RESUME,
+    N_SERVMSG, N_BROADCAST, N_ITEMLIST, N_RESUME,
     N_EDITMODE, N_EDITENT, N_EDITF, N_EDITT, N_EDITM, N_FLIP, N_COPY, N_PASTE, N_ROTATE, N_REPLACE, N_DELCUBE, N_REMIP, N_EDITVSLOT, N_UNDO, N_REDO, N_NEWMAP, N_GETMAP, N_SENDMAP, N_CLIPBOARD, N_EDITVAR,
     N_MASTERMODE, N_KICK, N_CLEARBANS, N_CURRENTMASTER, N_SPECTATOR, N_SETMASTER, N_SETTEAM,
     N_BASES, N_BASEINFO, N_BASESCORE, N_REPAMMO, N_BASEREGEN, N_ANNOUNCE,
@@ -240,6 +243,7 @@ enum
     N_MAPCRC, N_CHECKMAPS,
     N_SWITCHNAME, N_SWITCHMODEL, N_SWITCHTEAM,
     N_INITTOKENS, N_TAKETOKEN, N_EXPIRETOKENS, N_DROPTOKENS, N_DEPOSITTOKENS, N_STEALTOKENS,
+    N_ROUNDSCORE,
     N_SERVCMD,
     N_DEMOPACKET,
     NUMMSG
@@ -248,19 +252,21 @@ enum
 static const int msgsizes[] =               // size inclusive message token, 0 for variable or not-checked sizes
 {
     N_CONNECT, 0, N_SERVINFO, 0, N_WELCOME, 1, N_INITCLIENT, 0, N_POS, 0, N_TEXT, 0, N_SOUND, 2, N_CDIS, 2,
+    N_RELOAD, 2,
     N_SHOOT, 0, N_EXPLODE, 0, N_SUICIDE, 1,
-    N_DIED, 5, N_DAMAGE, 6, N_HITPUSH, 7, N_SHOTFX, 10, N_EXPLODEFX, 4,
-    N_TRYSPAWN, 1, N_SPAWNSTATE, 14, N_SPAWN, 3, N_FORCEDEATH, 2,
+    N_DIED, 6, N_DAMAGE, 6, N_HITPUSH, 7, N_SHOTFX, 11, N_EXPLODEFX, 4,
+    N_TRYSPAWN, 1, N_SPAWNSTATE, 20, N_SPAWN, 3, N_FORCEDEATH, 2,
     N_GUNSELECT, 2, N_TAUNT, 1,
+    N_RESTARTVOTE, 2, N_RESTARTGAME, 1,
     N_MAPCHANGE, 0, N_MAPVOTE, 0, N_TEAMINFO, 0, N_ITEMSPAWN, 2, N_ITEMPICKUP, 2, N_ITEMACC, 3,
     N_PING, 2, N_PONG, 2, N_CLIENTPING, 2,
     N_TIMEUP, 2, N_FORCEINTERMISSION, 1,
-    N_SERVMSG, 0, N_ITEMLIST, 0, N_RESUME, 0,
+    N_SERVMSG, 0, N_BROADCAST, 0, N_ITEMLIST, 0, N_RESUME, 0,
     N_EDITMODE, 2, N_EDITENT, 11, N_EDITF, 16, N_EDITT, 16, N_EDITM, 16, N_FLIP, 14, N_COPY, 14, N_PASTE, 14, N_ROTATE, 15, N_REPLACE, 17, N_DELCUBE, 14, N_REMIP, 1, N_EDITVSLOT, 16, N_UNDO, 0, N_REDO, 0, N_NEWMAP, 2, N_GETMAP, 1, N_SENDMAP, 0, N_EDITVAR, 0,
     N_MASTERMODE, 2, N_KICK, 0, N_CLEARBANS, 1, N_CURRENTMASTER, 0, N_SPECTATOR, 3, N_SETMASTER, 0, N_SETTEAM, 0,
     N_BASES, 0, N_BASEINFO, 0, N_BASESCORE, 0, N_REPAMMO, 1, N_BASEREGEN, 6, N_ANNOUNCE, 2,
     N_LISTDEMOS, 1, N_SENDDEMOLIST, 0, N_GETDEMO, 2, N_SENDDEMO, 0,
-    N_DEMOPLAYBACK, 3, N_RECORDDEMO, 2, N_STOPDEMO, 1, N_CLEARDEMOS, 2,
+    N_DEMOPLAYBACK, 3, N_RECORDDEMO, 1, N_STOPDEMO, 1, N_CLEARDEMOS, 2,
     N_TAKEFLAG, 3, N_RETURNFLAG, 4, N_RESETFLAG, 6, N_INVISFLAG, 3, N_TRYDROPFLAG, 1, N_DROPFLAG, 7, N_SCOREFLAG, 10, N_INITFLAGS, 0,
     N_SAYTEAM, 0,
     N_CLIENT, 0,
@@ -270,18 +276,19 @@ static const int msgsizes[] =               // size inclusive message token, 0 f
     N_MAPCRC, 0, N_CHECKMAPS, 1,
     N_SWITCHNAME, 0, N_SWITCHMODEL, 2, N_SWITCHTEAM, 0,
     N_INITTOKENS, 0, N_TAKETOKEN, 2, N_EXPIRETOKENS, 0, N_DROPTOKENS, 0, N_DEPOSITTOKENS, 2, N_STEALTOKENS, 0,
+    N_ROUNDSCORE, 0,
     N_SERVCMD, 0,
     N_DEMOPACKET, 0,
     -1
 };
 
-#define SAUERBRATEN_LANINFO_PORT 28784
-#define SAUERBRATEN_SERVER_PORT 28785
-#define SAUERBRATEN_SERVINFO_PORT 28786
-#define SAUERBRATEN_MASTER_PORT 28787
-#define PROTOCOL_VERSION 260            // bump when protocol changes
+#define TERSAFARI_LANINFO_PORT 29784
+#define TERSAFARI_SERVER_PORT 29785
+#define TERSAFARI_SERVINFO_PORT 29786
+#define TERSAFARI_MASTER_PORT 29787
+#define PROTOCOL_VERSION 0              // bump when protocol changes
 #define DEMO_VERSION 1                  // bump when demo format changes
-#define DEMO_MAGIC "SAUERBRATEN_DEMO"
+#define DEMO_MAGIC "TERSAFARI_DEMO"
 
 struct demoheader
 {
@@ -290,7 +297,7 @@ struct demoheader
 };
 
 #define MAXNAMELEN 15
-#define MAXTEAMLEN 4
+#define MAXTEAMLEN 8
 
 enum
 {
@@ -327,56 +334,225 @@ enum
 static struct itemstat { int add, max, sound; const char *name; int icon, info; } itemstats[] =
 {
     {10,    30,    S_ITEMAMMO,   "SG", HICON_SG, GUN_SG},
-    {20,    60,    S_ITEMAMMO,   "CG", HICON_CG, GUN_CG},
-    {5,     15,    S_ITEMAMMO,   "RL", HICON_RL, GUN_RL},
+    {40,    120,   S_ITEMAMMO,   "CG", HICON_CG, GUN_CG},
+    {5,     30,    S_ITEMAMMO,   "RL", HICON_RL, GUN_RL},
     {5,     15,    S_ITEMAMMO,   "RI", HICON_RIFLE, GUN_RIFLE},
     {10,    30,    S_ITEMAMMO,   "GL", HICON_GL, GUN_GL},
-    {30,    120,   S_ITEMAMMO,   "PI", HICON_PISTOL, GUN_PISTOL},
-    {25,    100,   S_ITEMHEALTH, "H", HICON_HEALTH, -1},
-    {10,    1000,  S_ITEMHEALTH, "MH", HICON_HEALTH, -1},
-    {100,   100,   S_ITEMARMOUR, "GA", HICON_GREEN_ARMOUR, A_GREEN},
-    {200,   200,   S_ITEMARMOUR, "YA", HICON_YELLOW_ARMOUR, A_YELLOW},
-    {20000, 30000, S_ITEMPUP,    "Q", HICON_QUAD, -1},
+    {18,    60,    S_ITEMAMMO,   "PI", HICON_PISTOL, GUN_PISTOL},
+    {25,    100,   S_ITEMHEALTH, "H",  HICON_HEALTH},
+    {30000, 60000, S_ITEMHEALTH, "MH", HICON_HEALTH},
+    {75,    150,   S_ITEMARMOUR, "GA", HICON_GREEN_ARMOUR, A_GREEN},
+    {150,   200,   S_ITEMARMOUR, "YA", HICON_YELLOW_ARMOUR, A_YELLOW},
+    {20000, 30000, S_ITEMPUP,    "Q", HICON_QUAD},
 };
 
-#define MAXRAYS 20
+#define MAXRAYS 25
 #define EXP_SELFDAMDIV 2
-#define EXP_SELFPUSH 2.5f
+#define EXP_SELFPUSH 1.5f
 #define EXP_DISTSCALE 1.5f
 
-static const struct guninfo { int sound, attackdelay, damage, spread, projspeed, kickamount, range, rays, hitpush, exprad, ttl; const char *name, *file; short part; } guns[NUMGUNS] =
+struct guninfo
 {
-    { S_PUNCH1,    250,  50,   0,   0,  0,   14,  1,  80,  0,    0, "fist",            "fist",   0 },
-    { S_SG,       1400,  10, 400,   0, 20, 1024, 20,  80,  0,    0, "shotgun",         "shotg",  0 },
-    { S_CG,        100,  30, 100,   0,  7, 1024,  1,  80,  0,    0, "chaingun",        "chaing", 0 },
-    { S_RLFIRE,    800, 120,   0, 320, 10, 1024,  1, 160, 40,    0, "rocketlauncher",  "rocket", 0 },
-    { S_RIFLE,    1500, 100,   0,   0, 30, 2048,  1,  80,  0,    0, "rifle",           "rifle",  0 },
-    { S_FLAUNCH,   600,  90,   0, 200, 10, 1024,  1, 250, 45, 1500, "grenadelauncher", "gl",     0 },
-    { S_PISTOL,    500,  35,  50,   0,  7, 1024,  1,  80,  0,    0, "pistol",          "pistol", 0 },
-    { S_FLAUNCH,   200,  20,   0, 200,  1, 1024,  1,  80, 40,    0, "fireball",        NULL,     PART_FIREBALL1 },
-    { S_ICEBALL,   200,  40,   0, 120,  1, 1024,  1,  80, 40,    0, "iceball",         NULL,     PART_FIREBALL2 },
-    { S_SLIMEBALL, 200,  30,   0, 640,  1, 1024,  1,  80, 40,    0, "slimeball",       NULL,     PART_FIREBALL3 },
-    { S_PIGR1,     250,  50,   0,   0,  1,   12,  1,  80,  0,    0, "bite",            NULL,     0 },
-    { -1,            0, 120,   0,   0,  0,    0,  1,  80, 40,    0, "barrel",          NULL,     0 }
+    int sound;
+    int attackdelay;
+    int charge;
+    int damage, bonus;
+    int spread;
+    int projspeed;
+    int kickamount;
+    int range;
+    int rays;
+    int hitpush;
+    int exprad, ttl;
+    int capacity, reload, reloaddelay;
+    const char *name, *file;
+guninfo() : sound(-1), charge(0), bonus(0), spread(0),
+        projspeed(0), kickamount(0), range(1024),
+        rays(1), hitpush(80), exprad(0), ttl(0),
+        capacity(0), reload(0), reloaddelay(0) {}
+};
+struct punchinfo : guninfo
+{
+    punchinfo()
+    {
+        sound = S_PUNCH1;
+        attackdelay = 250;
+        damage = 50;
+        range = 14;
+        name = "fist";
+        file = "fist";
+    }
+};
+struct sginfo : guninfo
+{
+    sginfo()
+    {
+        sound = S_SG;
+        attackdelay = 800;
+        damage = 4;
+        spread = 100;
+        rays = 25;
+        name = "shotgun";
+        file = "shotg";
+    }
+};
+struct cginfo : guninfo
+{
+    cginfo()
+    {
+        sound = S_CG;
+        attackdelay = 75;
+        damage = 10;
+        spread = 20;
+        name = "chaingun";
+        file = "chaing";
+    }
+};
+struct rlinfo : guninfo
+{
+    rlinfo()
+    {
+        sound = S_RLFIRE;
+        attackdelay = 850;
+        damage = 110;
+        projspeed = 300;
+        hitpush = 170;
+        exprad = 35;
+        name = "rocketlauncher";
+        file = "rocket";
+    }
+};
+struct rifleinfo : guninfo
+{
+    rifleinfo()
+    {
+        sound = S_RIFLE;
+        attackdelay = 1500;
+        damage = 90, bonus = 30;
+        kickamount = 15;
+        name = "rifle";
+        file = "rifle";
+    }
+};
+struct glinfo : guninfo
+{
+    glinfo()
+    {
+        sound = S_FLAUNCH;
+        attackdelay = 750;
+        charge = 1300;
+        damage = 90;
+        projspeed = 190;
+        hitpush = 250;
+        exprad = 40;
+        ttl = 1200;
+        name = "grenadelauncher";
+        file = "gl";
+    }
+};
+struct pistolinfo : guninfo
+{
+    pistolinfo()
+    {
+        sound = S_PISTOL;
+        attackdelay = 300;
+        damage = 15, bonus = 15;
+        capacity = 6, reload = 6, reloaddelay = 1100;
+        name = "pistol";
+        file = "pistol";
+    }
+};
+static const guninfo guns[NUMGUNS] =
+{
+    punchinfo(),
+    sginfo(),
+    cginfo(),
+    rlinfo(),
+    rifleinfo(),
+    glinfo(),
+    pistolinfo()
+    // fireball, iceball, barrel and such are undefined for now
+    // consider SP broken anyway...
 };
 
 #include "ai.h"
+
+struct fpsstate;
+namespace server
+{
+    struct powerstate
+    {
+        int millis;
+        virtual void start(fpsstate *s)
+        {
+            millis = 20000;
+        }
+        virtual void end(fpsstate *s)
+        {
+            millis = 0;
+        }
+        virtual bool update(int curtime, fpsstate *s)
+        {
+            if(curtime > 0 && millis)
+            {
+                millis = max(millis - curtime, 0);
+                if (!millis) 
+                {
+                    end(s);
+                    return true;
+                }
+            }
+            return false;
+        }
+    };
+
+    struct quadstate : powerstate
+    {
+    };
+    struct booststate : powerstate
+    {
+        int nextboost;
+        void start(fpsstate *s);
+        void end(fpsstate *s);
+        bool update(int curtime, fpsstate *s);
+    };
+}
 
 // inherited by fpsent and server clients
 struct fpsstate
 {
     int health, maxhealth;
     int armour, armourtype;
-    int quadmillis;
     int gunselect, gunwait;
-    int ammo[NUMGUNS];
+    int ammo[NUMGUNS], magazine[NUMGUNS];
     int aitype, skill;
+
+    server::quadstate quad;
+    server::booststate boost;
 
     fpsstate() : maxhealth(100), aitype(AI_NONE), skill(0) {}
 
-    void baseammo(int gun, int k = 2, int scale = 1)
+    void updatepowerup(int curtime)
     {
-        ammo[gun] = (itemstats[gun-GUN_SG].add*k)/scale;
+        quad.update(curtime, this);
+        boost.update(curtime, this);
+    }
+
+    void baseammo(int gun)
+    {
+        float factor = 1.0f;
+        switch(gun)
+        {
+        case GUN_SG:
+        case GUN_RL:
+            factor = 2.f/3.f;
+            break;
+        case GUN_RIFLE:
+        case GUN_GL:
+            factor = 1.f/3.f;
+            break;
+        }
+        ammo[gun] = itemstats[gun-GUN_SG].max * factor;
     }
 
     void addammo(int gun, int k = 1, int scale = 1)
@@ -397,13 +573,13 @@ struct fpsstate
         itemstat &is = itemstats[type-I_SHELLS];
         switch(type)
         {
-            case I_BOOST: return maxhealth<is.max;
             case I_HEALTH: return health<maxhealth;
             case I_GREENARMOUR:
                 // (100h/100g only absorbs 200 damage)
                 if(armourtype==A_YELLOW && armour>=100) return false;
             case I_YELLOWARMOUR: return !armourtype || armour<is.max;
-            case I_QUAD: return quadmillis<is.max;
+            case I_BOOST:
+            case I_QUAD: return true;
             default: return ammo[is.info]<is.max;
         }
     }
@@ -415,7 +591,8 @@ struct fpsstate
         switch(type)
         {
             case I_BOOST:
-                maxhealth = min(maxhealth+is.add, is.max);
+                boost.start(this);
+                break;
             case I_HEALTH: // boost also adds to health
                 health = min(health+is.add, maxhealth);
                 break;
@@ -425,7 +602,7 @@ struct fpsstate
                 armourtype = is.info;
                 break;
             case I_QUAD:
-                quadmillis = min(quadmillis+is.add, is.max);
+                quad.start(this);
                 break;
             default:
                 ammo[is.info] = min(ammo[is.info]+is.add, is.max);
@@ -435,13 +612,15 @@ struct fpsstate
 
     void respawn()
     {
+        quad.end(this);
+        boost.end(this);
         health = maxhealth;
         armour = 0;
         armourtype = A_BLUE;
-        quadmillis = 0;
         gunselect = GUN_PISTOL;
         gunwait = 0;
         loopi(NUMGUNS) ammo[i] = 0;
+        loopi(NUMGUNS) magazine[i] = 0;
         ammo[GUN_FIST] = 1;
     }
 
@@ -466,31 +645,18 @@ struct fpsstate
             ammo[GUN_PISTOL] = 40;
             ammo[GUN_GL] = 1;
         }
-        else if(m_tactics)
-        {
-            armourtype = A_GREEN;
-            armour = 100;
-            ammo[GUN_PISTOL] = 40;
-            int spawngun1 = rnd(5)+1, spawngun2;
-            gunselect = spawngun1;
-            baseammo(spawngun1, m_noitems ? 2 : 1);
-            do spawngun2 = rnd(5)+1; while(spawngun1==spawngun2);
-            baseammo(spawngun2, m_noitems ? 2 : 1);
-            if(m_noitems) ammo[GUN_GL] += 1;
-        }
         else if(m_efficiency)
         {
-            armourtype = A_GREEN;
-            armour = 100;
-            loopi(5) baseammo(i+1);
+            armourtype = A_YELLOW;
+            armour = 125;
+            loopi(6) baseammo(i+1);
             gunselect = GUN_CG;
-            ammo[GUN_CG] /= 2;
         }
         else if(m_ctf || m_collect)
         {
             armourtype = A_BLUE;
             armour = 50;
-            ammo[GUN_PISTOL] = 40;
+            ammo[GUN_PISTOL] = 24;
             ammo[GUN_GL] = 1;
         }
         else if(m_sp)
@@ -507,15 +673,19 @@ struct fpsstate
         {
             armourtype = A_BLUE;
             armour = 25;
-            ammo[GUN_PISTOL] = 40;
+            ammo[GUN_PISTOL] = 24;
             ammo[GUN_GL] = 1;
+        }
+        loopi(NUMGUNS)
+        {
+            if(ammo[i]) magazine[i] = guns[i].capacity;
         }
     }
 
     // just subtract damage here, can set death, etc. later in code calling this
     int dodamage(int damage)
     {
-        int ad = damage*(armourtype+1)*25/100; // let armour absorb when possible
+        int ad = damage*armourinfo(armourtype); // let armour absorb when possible
         if(ad>armour) ad = armour;
         armour -= ad;
         damage -= ad;
@@ -523,11 +693,29 @@ struct fpsstate
         return damage;
     }
 
+    int survivable()
+    {
+        return min((int)(health / (1.0f - armourinfo(armourtype))), health + armour);
+    }
+
     int hasammo(int gun, int exclude = -1)
     {
-        return gun >= 0 && gun <= NUMGUNS && gun != exclude && ammo[gun] > 0;
+        return gun >= 0 && gun <= NUMGUNS && gun != exclude && (ammo[gun] > 0 || magazine[gun] > 0);
+    }
+
+    int &ammosource(int gun)
+    {
+        return (guns[gun].capacity ? magazine : ammo)[gun];
+    }
+
+    void reload(int gun)
+    {
+        const int reload = min(guns[gun].capacity - magazine[gun], min(guns[gun].reload, ammo[gun]));
+        magazine[gun] += reload;
+        ammo[gun] -= reload;
     }
 };
+
 
 struct fpsent : dynent, fpsstate
 {
@@ -536,7 +724,10 @@ struct fpsent : dynent, fpsstate
     int lifesequence;                   // sequence id for each respawn, used in damage test
     int respawned, suicided;
     int lastpain;
+    int lastyelp;
+    int lastreload;
     int lastaction, lastattackgun;
+    int attackcharge;
     bool attacking;
     int attacksound, attackchan, idlesound, idlechan;
     int lasttaunt;
@@ -547,6 +738,8 @@ struct fpsent : dynent, fpsstate
     float deltayaw, deltapitch, deltaroll, newyaw, newpitch, newroll;
     int smoothmillis;
 
+    int arena; // arena spawn preference
+
     string name, team, info;
     int playermodel;
     ai::aiinfo *ai;
@@ -554,7 +747,7 @@ struct fpsent : dynent, fpsstate
 
     vec muzzle;
 
-    fpsent() : weight(100), clientnum(-1), privilege(PRIV_NONE), lastupdate(0), plag(0), ping(0), lifesequence(0), respawned(-1), suicided(-1), lastpain(0), attacksound(-1), attackchan(-1), idlesound(-1), idlechan(-1), frags(0), flags(0), deaths(0), totaldamage(0), totalshots(0), edit(NULL), smoothmillis(-1), playermodel(-1), ai(NULL), ownernum(-1), muzzle(-1, -1, -1)
+    fpsent() : weight(100), clientnum(-1), privilege(PRIV_NONE), lastupdate(0), plag(0), ping(0), lifesequence(0), respawned(-1), suicided(-1), lastpain(0), lastyelp(0), attacksound(-1), attackchan(-1), idlesound(-1), idlechan(-1), frags(0), flags(0), deaths(0), totaldamage(0), totalshots(0), edit(NULL), smoothmillis(-1), arena(0), playermodel(-1), ai(NULL), ownernum(-1), muzzle(-1, -1, -1)
     {
         name[0] = team[0] = info[0] = 0;
         respawn();
@@ -591,8 +784,10 @@ struct fpsent : dynent, fpsstate
         dynent::reset();
         fpsstate::respawn();
         respawned = suicided = -1;
+        lastreload = 0;
         lastaction = 0;
         lastattackgun = gunselect;
+        attackcharge = 0;
         attacking = false;
         lasttaunt = 0;
         lastpickup = -1;
@@ -648,7 +843,7 @@ namespace entities
     extern void resettriggers();
     extern void checktriggers();
     extern void checkitems(fpsent *d);
-    extern void checkquad(int time, fpsent *d);
+    extern void checkpowerup(int time, fpsent *d);
     extern void resetspawns();
     extern void spawnitems(bool force = false);
     extern void putitems(packetbuf &p);
@@ -675,7 +870,6 @@ namespace game
         virtual void setup() {}
         virtual void checkitems(fpsent *d) {}
         virtual int respawnwait(fpsent *d) { return 0; }
-        virtual void pickspawn(fpsent *d) { findplayerspawn(d); }
         virtual void senditems(packetbuf &p) {}
         virtual void removeplayer(fpsent *d) {}
         virtual void gameover() {}
@@ -686,6 +880,7 @@ namespace game
         virtual bool aicheck(fpsent *d, ai::aistate &b) { return false; }
         virtual bool aidefend(fpsent *d, ai::aistate &b) { return false; }
         virtual bool aipursue(fpsent *d, ai::aistate &b) { return false; }
+        virtual bool canfollow(const fpsent *spec, const fpsent *player) { return spec->state == CS_SPECTATOR; }
     };
 
     extern clientmode *cmode;
@@ -711,6 +906,7 @@ namespace game
     extern const char *teamcolorname(fpsent *d, const char *alt = "you");
     extern const char *teamcolor(const char *name, bool sameteam, const char *alt = NULL);
     extern const char *teamcolor(const char *name, const char *team, const char *alt = NULL);
+    extern bool spectating(physent *d);
     extern fpsent *pointatplayer();
     extern fpsent *hudplayer();
     extern fpsent *followingplayer();
@@ -721,10 +917,11 @@ namespace game
     extern void spawnplayer(fpsent *);
     extern void deathstate(fpsent *d, bool restore = false);
     extern void damaged(int damage, fpsent *d, fpsent *actor, bool local = true);
-    extern void killed(fpsent *d, fpsent *actor);
+    extern void killed(fpsent *d, fpsent *actor, int gun = -1);
     extern void timeupdate(int timeremain);
     extern void msgsound(int n, physent *d = NULL);
     extern void drawicon(int icon, float x, float y, float sz = 120);
+    extern void showbroadcast(const char *message, int duration);
     const char *mastermodecolor(int n, const char *unknown);
     const char *mastermodeicon(int n, const char *unknown);
 
@@ -748,36 +945,10 @@ namespace game
     extern void c2sinfo(bool force = false);
     extern void sendposition(fpsent *d, bool reliable = false);
 
-    // monster
-    struct monster;
-    extern vector<monster *> monsters;
-
-    extern void clearmonsters();
-    extern void preloadmonsters();
-    extern void stackmonster(monster *d, physent *o);
-    extern void updatemonsters(int curtime);
-    extern void rendermonsters();
-    extern void suicidemonster(monster *m);
-    extern void hitmonster(int damage, monster *m, fpsent *at, const vec &vel, int gun);
-    extern void monsterkilled();
-    extern void endsp(bool allkilled);
-    extern void spsummary(int accuracy);
-
-    // movable
-    struct movable;
-    extern vector<movable *> movables;
-
-    extern void clearmovables();
-    extern void stackmovable(movable *d, physent *o);
-    extern void updatemovables(int curtime);
-    extern void rendermovables();
-    extern void suicidemovable(movable *m);
-    extern void hitmovable(int damage, movable *m, fpsent *at, const vec &vel, int gun);
-
     // weapon
     extern int getweapon(const char *name);
     extern void shoot(fpsent *d, const vec &targ);
-    extern void shoteffects(int gun, const vec &from, const vec &to, fpsent *d, bool local, int id, int prevaction);
+    extern void shoteffects(int gun, const vec &from, const vec &to, fpsent *d, bool local, int id, int prevaction, int charge);
     extern void explode(bool local, fpsent *owner, const vec &v, dynent *safe, int dam, int gun);
     extern void explodeeffects(int gun, fpsent *d, bool local, int id = 0);
     extern void damageeffect(int damage, fpsent *d, bool thirdperson = true);
@@ -805,6 +976,7 @@ namespace game
     extern void getbestplayers(vector<fpsent *> &best);
     extern void getbestteams(vector<const char *> &best);
     extern void clearteaminfo();
+    extern void resetteaminfo();
     extern void setteaminfo(const char *team, int frags);
 
     // render
@@ -830,8 +1002,11 @@ namespace game
 
 namespace server
 {
+    extern const char *TEAM_A;
+    extern const char *TEAM_B;
     extern const char *modename(int n, const char *unknown = "unknown");
     extern const char *mastermodename(int n, const char *unknown = "unknown");
+    extern bool wantentity(int type);
     extern void startintermission();
     extern void stopdemo();
     extern void forcemap(const char *map, int mode);
@@ -841,6 +1016,8 @@ namespace server
     extern int msgsizelookup(int msg);
     extern bool serveroption(const char *arg);
     extern bool delayspawn(int type);
+    extern const int cgdamage(const float dist);
+    extern void restartgame();
 }
 
 #endif

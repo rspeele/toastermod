@@ -156,7 +156,7 @@ namespace game
         }
         if(d->state==CS_ALIVE)
         {
-            if((testquad || d->quadmillis) && mdl.quad)
+            if((testquad || d->quad.millis) && mdl.quad)
                 a[ai++] = modelattach("tag_powerup", mdl.quad, ANIM_POWERUP|ANIM_LOOP, 0);
             if(testarmour || d->armour)
             {
@@ -225,8 +225,6 @@ namespace game
             renderplayer(d, getplayermodelinfo(d), team, fade, mainpass);
         } 
         if(isthirdperson() && !followingplayer() && (player1->state!=CS_DEAD || !hidedead)) renderplayer(player1, getplayermodelinfo(player1), teamskins || m_teammode ? 1 : 0, 1, mainpass);
-        rendermonsters();
-        rendermovables();
         entities::renderentities();
         renderbouncers();
         renderprojectiles();
@@ -270,7 +268,6 @@ namespace game
             float k = pow(0.7f, curtime/10.0f);
             swaydir.mul(k);
             vec vel(d->vel);
-            vel.add(d->falling);
             swaydir.add(vec(vel).mul((1-k)/(15*max(vel.magnitude(), d->maxspeed))));
         }
     }
@@ -293,7 +290,14 @@ namespace game
         sway.z = swayup*(fabs(sinf(steps)) - 1);
         sway.add(swaydir).add(d->o);
         if(!hudgunsway) sway = d->o;
-
+        if(guns[d->gunselect].charge && d->attackcharge) // move hudgun back when charging
+        {
+            vec chargeoffset;
+            vecfromyawpitch(d->yaw, d->pitch, -1, 0, chargeoffset);
+            const float charge = (float)(lastmillis - d->attackcharge) / (float)guns[d->gunselect].charge;
+            chargeoffset.mul(charge * 0.8f);
+            sway.add(chargeoffset);
+        }
 #if 0
         if(player1->state!=CS_DEAD && player1->quadmillis)
         {
@@ -333,7 +337,7 @@ namespace game
         int rtime = guns[d->gunselect].attackdelay;
         if(d->lastaction && d->lastattackgun==d->gunselect && lastmillis-d->lastaction<rtime)
         {
-            drawhudmodel(d, ANIM_GUN_SHOOT|ANIM_SETSPEED, rtime/17.0f, d->lastaction);
+            drawhudmodel(d, ANIM_GUN_SHOOT|ANIM_SETSPEED, rtime, d->lastaction);
         }
         else
         {
@@ -433,7 +437,6 @@ namespace game
         preloadplayermodel();
         preloadsounds();
         entities::preloadentities();
-        if(m_sp) preloadmonsters();
     }
 
 }

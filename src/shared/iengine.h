@@ -54,6 +54,7 @@ extern int thirdperson;
 extern bool isthirdperson();
 
 extern bool settexture(const char *name, int clamp = 0);
+extern void enabletexture(const bool on);
 
 // octaedit
 
@@ -222,7 +223,7 @@ static inline bool insideworld(const ivec &o)
 // world
 extern bool emptymap(int factor, bool force, const char *mname = "", bool usecfg = true);
 extern bool enlargemap(bool force);
-extern int findentity(int type, int index = 0, int attr1 = -1, int attr2 = -1);
+extern int findentity(int type, int index = 0, int attr1 = -1, int attr2 = -1, int attr3 = -1);
 extern void findents(int low, int high, bool notspawned, const vec &pos, const vec &radius, vector<int> &found);
 extern void mpeditent(int i, const vec &o, int type, int attr1, int attr2, int attr3, int attr4, int attr5, bool local);
 extern vec getselpos();
@@ -332,8 +333,8 @@ extern void regular_particle_splash(int type, int num, int fade, const vec &p, i
 extern void regular_particle_flame(int type, const vec &p, float radius, float height, int color, int density = 3, float scale = 2.0f, float speed = 200.0f, float fade = 600.0f, int gravity = -15);
 extern void particle_splash(int type, int num, int fade, const vec &p, int color = 0xFFFFFF, float size = 1.0f, int radius = 150, int gravity = 2);
 extern void particle_trail(int type, int fade, const vec &from, const vec &to, int color = 0xFFFFFF, float size = 1.0f, int gravity = 20);
-extern void particle_text(const vec &s, const char *t, int type, int fade = 2000, int color = 0xFFFFFF, float size = 2.0f, int gravity = 0);
-extern void particle_textcopy(const vec &s, const char *t, int type, int fade = 2000, int color = 0xFFFFFF, float size = 2.0f, int gravity = 0);
+extern void particle_text(const vec &s, const char *t, int type, int fade = 2000, int color = 0xFFFFFF, float size = 2.0f, int gravity = 0, int maxdist = 0);
+extern void particle_textcopy(const vec &s, const char *t, int type, int fade = 2000, int color = 0xFFFFFF, float size = 2.0f, int gravity = 0, int maxdist = 0);
 extern void particle_icon(const vec &s, int ix, int iy, int type, int fade = 2000, int color = 0xFFFFFF, float size = 2.0f, int gravity = 0);
 extern void particle_meter(const vec &s, float val, int type, int fade = 1, int color = 0xFFFFFF, int color2 = 0xFFFFF, float size = 2.0f);
 extern void particle_flare(const vec &p, const vec &dest, int fade, int type, int color = 0xFFFFFF, float size = 0.28f, physent *owner = NULL);
@@ -365,9 +366,9 @@ extern physent *collideplayer;
 
 extern void moveplayer(physent *pl, int moveres, bool local);
 extern bool moveplayer(physent *pl, int moveres, bool local, int curtime);
-extern bool collide(physent *d, const vec &dir = vec(0, 0, 0), float cutoff = 0.0f, bool playercol = true);
-extern bool bounce(physent *d, float secs, float elasticity, float waterfric, float grav);
-extern bool bounce(physent *d, float elasticity, float waterfric, float grav);
+extern bool collide(physent *d, const vec &dir = vec(0, 0, 0), float cutoff = 0.0f, bool playercol = true, physent *safe = NULL);
+extern bool bounce(physent *d, float secs, float elasticity, float waterfric, float grav, physent *safe = NULL, bool players = true);
+extern bool bounce(physent *d, float elasticity, float waterfric, float grav, physent *safe = NULL, bool players = true);
 extern void avoidcollision(physent *d, const vec &dir, physent *obstacle, float space);
 extern bool overlapsdynent(const vec &o, float radius);
 extern bool movecamera(physent *pl, const vec &dir, float dist, float stepdist);
@@ -382,7 +383,7 @@ extern void updatephysstate(physent *d);
 extern void cleardynentcache();
 extern void updatedynentcache(physent *d);
 extern bool entinmap(dynent *d, bool avoidplayers = false);
-extern void findplayerspawn(dynent *d, int forceent = -1, int tag = 0);
+extern void findplayerspawn(dynent *d, int forceent = -1, int tag = 0, int arena = 0);
 
 // sound
 enum

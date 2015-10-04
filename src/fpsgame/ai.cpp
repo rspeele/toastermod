@@ -1240,7 +1240,7 @@ namespace ai
                 if(d->ragdoll) cleanragdoll(d);
                 moveplayer(d, 10, true);
                 if(allowmove && !b.idle) timeouts(d, b);
-                if(d->quadmillis) entities::checkquad(curtime, d);
+                d->quad.update(curtime, d);
 				entities::checkitems(d);
 				if(cmode) cmode->checkitems(d);
             }

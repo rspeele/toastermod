@@ -1,7 +1,7 @@
 #ifndef PARSEMESSAGES
 
-#define collectteambase(s) (!strcmp(s, "good") ? 1 : (!strcmp(s, "evil") ? 2 : 0))
-#define collectbaseteam(i) (i==1 ? "good" : (i==2 ? "evil" : NULL))
+#define collectteambase(s) (!strcmp(s, server::TEAM_A) ? 1 : (!strcmp(s, server::TEAM_B) ? 2 : 0))
+#define collectbaseteam(i) (i==1 ? server::TEAM_A : (i==2 ? server::TEAM_B : NULL))
 
 #ifdef SERVMODE
 struct collectservmode : servmode
@@ -176,6 +176,11 @@ struct collectclientmode : clientmode
     bool notgotbases;
 
     collectservmode() : notgotbases(false) {}
+
+    int pickspawn(clientinfo *ci)
+    {
+        return pickplayerspawn(ci, collectteambase(ci->team));
+    }
 
     void reset(bool empty)
     {
@@ -446,10 +451,9 @@ struct collectclientmode : clientmode
     {
         if(d->state == CS_ALIVE && d->tokens > 0)
         {
-            int x = HICON_X + 3*HICON_STEP + (d->quadmillis ? HICON_SIZE + HICON_SPACE : 0);
-            pushhudmatrix();
-            hudmatrix.scale(2, 2, 1);
-            flushhudmatrix();
+            int x = HICON_X + 3*HICON_STEP + (d->quad.millis ? HICON_SIZE + HICON_SPACE : 0);
+            glPushMatrix();
+            glScalef(2, 2, 1);
             draw_textf("%d", (x + HICON_SIZE + HICON_SPACE)/2, HICON_TEXTY/2, d->tokens);
             pophudmatrix();
             drawicon(HICON_TOKEN, x, HICON_Y);
@@ -758,11 +762,6 @@ struct collectclientmode : clientmode
     int respawnwait(fpsent *d)
     {
         return max(0, RESPAWNSECS-(lastmillis-d->lastpain)/1000);
-    }
-
-    void pickspawn(fpsent *d)
-    {
-        findplayerspawn(d, -1, collectteambase(d->team));
     }
 
     bool aicheck(fpsent *d, ai::aistate &b)

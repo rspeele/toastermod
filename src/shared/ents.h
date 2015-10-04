@@ -61,10 +61,11 @@ enum { COLLIDE_NONE = 0, COLLIDE_ELLIPSE, COLLIDE_OBB, COLLIDE_ELLIPSE_PRECISE }
 
 struct physent                                  // base entity type, can be affected by physics
 {
-    vec o, vel, falling;                        // origin, velocity
+    vec o, vel;                                 // origin, velocity
     vec deltapos, newpos;                       // movement interpolation
     float yaw, pitch, roll;
-    float maxspeed;                             // cubes per second, 100 for player
+    float maxspeed;                             // cubes per second, 90 for player
+    int wjfadetime;
     int timeinair;
     float radius, eyeheight, aboveeye;          // bounding box size
     float xradius, yradius, zmargin;
@@ -81,7 +82,7 @@ struct physent                                  // base entity type, can be affe
 
     bool blocked;                               // used by physics to signal ai
 
-    physent() : o(0, 0, 0), deltapos(0, 0, 0), newpos(0, 0, 0), yaw(0), pitch(0), roll(0), maxspeed(100), 
+    physent() : o(0, 0, 0), deltapos(0, 0, 0), newpos(0, 0, 0), yaw(0), pitch(0), roll(0), maxspeed(90), 
                radius(4.1f), eyeheight(14), aboveeye(1), xradius(4.1f), yradius(4.1f), zmargin(0),
                state(CS_ALIVE), editstate(CS_ALIVE), type(ENT_PLAYER),
                collidetype(COLLIDE_ELLIPSE),
@@ -98,10 +99,10 @@ struct physent                                  // base entity type, can be affe
     {
         inwater = 0;
         timeinair = 0;
-        jumping = false;
+        wjfadetime = 0;
         strafe = move = 0;
         physstate = PHYS_FALL;
-        vel = falling = vec(0, 0, 0);
+        vel = vec(0, 0, 0);
         floor = vec(0, 0, 1);
     }
 
@@ -198,7 +199,9 @@ struct dynent : physent                         // animated characters, or chara
     occludequery *query;
     int occluded, lastrendered;
 
-    dynent() : ragdoll(NULL), query(NULL), occluded(0), lastrendered(0)
+    float beloweye, headradius;                 // head size
+
+    dynent() : ragdoll(NULL), query(NULL), occluded(0), lastrendered(0), beloweye(2.0f), headradius(2.0f)
     { 
         reset(); 
     }

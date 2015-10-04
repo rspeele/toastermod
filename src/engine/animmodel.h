@@ -785,7 +785,15 @@ struct animmodel : model
                 {
                     info.frame = spec->frame;
                     info.range = spec->range;
-                    if(spec->speed>0) info.speed = 1000.0f/spec->speed;
+                    if(spec->speed>0)
+                    {
+                        float framerate = spec->speed;
+                        const float frames = info.range;
+                        const float seconds = (float)basetime2 / 1000.0f;
+                        // use whatever framerate fits range to interval
+                        if(anim&ANIM_SETSPEED && basetime && basetime2) framerate = frames/seconds;
+                        info.speed = 1000.0f/framerate;
+                    }
                 }
                 else getdefaultanim(info, anim, uint(varseed + info.basetime), d);
             }

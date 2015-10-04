@@ -102,17 +102,20 @@ namespace game
     #include "capture.h"
     #include "ctf.h"
     #include "collect.h"
+    #include "elimination.h"
 
     clientmode *cmode = NULL;
     captureclientmode capturemode;
     ctfclientmode ctfmode;
     collectclientmode collectmode;
+    elimclientmode eliminationmode;
 
     void setclientmode()
     {
         if(m_capture) cmode = &capturemode;
         else if(m_ctf) cmode = &ctfmode;
         else if(m_collect) cmode = &collectmode;
+        else if(m_elimination) cmode = &eliminationmode;
         else cmode = NULL;
     }
 
@@ -543,7 +546,6 @@ namespace game
     ICOMMANDS("m_noitems", "i", (int *mode), { int gamemode = *mode; intret(m_noitems); });
     ICOMMANDS("m_noammo", "i", (int *mode), { int gamemode = *mode; intret(m_noammo); });
     ICOMMANDS("m_insta", "i", (int *mode), { int gamemode = *mode; intret(m_insta); });
-    ICOMMANDS("m_tactics", "i", (int *mode), { int gamemode = *mode; intret(m_tactics); });
     ICOMMANDS("m_efficiency", "i", (int *mode), { int gamemode = *mode; intret(m_efficiency); });
     ICOMMANDS("m_capture", "i", (int *mode), { int gamemode = *mode; intret(m_capture); });
     ICOMMANDS("m_regencapture", "i", (int *mode), { int gamemode = *mode; intret(m_regencapture); });
@@ -574,11 +576,12 @@ namespace game
     }
     ICOMMAND(map, "s", (char *name), changemap(name));
 
-    void forceintermission()
+    void voterestart(int *favor)
     {
-        if(!remote && !hasnonlocalclients()) server::startintermission();
-        else addmsg(N_FORCEINTERMISSION, "r");
+        if(!remote && *favor) server::restartgame();
+        else if(player1->state!=CS_SPECTATOR || player1->privilege) addmsg(N_RESTARTVOTE, "ri", *favor);
     }
+    COMMAND(voterestart, "i");
 
     void forceedit(const char *name)
     {
@@ -924,19 +927,14 @@ namespace game
         uchar physstate = d->physstate | ((d->lifesequence&1)<<3) | ((d->move&3)<<4) | ((d->strafe&3)<<6);
         q.put(physstate);
         ivec o = ivec(vec(d->o.x, d->o.y, d->o.z-d->eyeheight).mul(DMF));
-        uint vel = min(int(d->vel.magnitude()*DVELF), 0xFFFF), fall = min(int(d->falling.magnitude()*DVELF), 0xFFFF);
-        // 3 bits position, 1 bit velocity, 3 bits falling, 1 bit material
+        uint vel = min(int(d->vel.magnitude()*DVELF), 0xFFFF);
+        // 3 bits position, 1 bit velocity, 1 bit jumping, 2 bits unused, 1 bit material
         uint flags = 0;
         if(o.x < 0 || o.x > 0xFFFF) flags |= 1<<0;
         if(o.y < 0 || o.y > 0xFFFF) flags |= 1<<1;
         if(o.z < 0 || o.z > 0xFFFF) flags |= 1<<2;
         if(vel > 0xFF) flags |= 1<<3;
-        if(fall > 0)
-        {
-            flags |= 1<<4;
-            if(fall > 0xFF) flags |= 1<<5;
-            if(d->falling.x || d->falling.y || d->falling.z > 0) flags |= 1<<6;
-        }
+        flags |= ((d->jumping & 1)<<4);
         if((lookupmaterial(d->feetpos())&MATF_CLIP) == MAT_GAMECLIP) flags |= 1<<7;
         putuint(q, flags);
         loopk(3)
@@ -956,19 +954,6 @@ namespace game
         uint veldir = (velyaw < 0 ? 360 + int(velyaw)%360 : int(velyaw)%360) + clamp(int(velpitch+90), 0, 180)*360;
         q.put(veldir&0xFF);
         q.put((veldir>>8)&0xFF);
-        if(fall > 0)
-        {
-            q.put(fall&0xFF);
-            if(fall > 0xFF) q.put((fall>>8)&0xFF);
-            if(d->falling.x || d->falling.y || d->falling.z > 0)
-            {
-                float fallyaw, fallpitch;
-                vectoyawpitch(d->falling, fallyaw, fallpitch);
-                uint falldir = (fallyaw < 0 ? 360 + int(fallyaw)%360 : int(fallyaw)%360) + clamp(int(fallpitch+90), 0, 180)*360;
-                q.put(falldir&0xFF);
-                q.put((falldir>>8)&0xFF);
-            }
-        }
     }
 
     void sendposition(fpsent *d, bool reliable)
@@ -1086,7 +1071,7 @@ namespace game
         const float dz = player1->o.z-d->o.z;
         const float rz = player1->aboveeye+d->eyeheight;
         const float fx = (float)fabs(dx), fy = (float)fabs(dy), fz = (float)fabs(dz);
-        if(fx<r && fy<r && fz<rz && player1->state!=CS_SPECTATOR && d->state!=CS_DEAD)
+        if(fx<r && fy<r && fz<rz && !spectating(player1) && d->state!=CS_DEAD)
         {
             if(fx<fy) d->o.y += dy<0 ? r-fy : -(r-fy);  // push aside
             else      d->o.x += dx<0 ? r-fx : -(r-fx);
@@ -1108,7 +1093,7 @@ namespace game
             case N_POS:                        // position of another client
             {
                 int cn = getuint(p), physstate = p.get(), flags = getuint(p);
-                vec o, vel, falling;
+                vec o, vel;
                 float yaw, pitch, roll;
                 loopk(3)
                 {
@@ -1123,18 +1108,6 @@ namespace game
                 dir = p.get(); dir |= p.get()<<8;
                 vecfromyawpitch(dir%360, clamp(dir/360, 0, 180)-90, 1, 0, vel);
                 vel.mul(mag/DVELF);
-                if(flags&(1<<4))
-                {
-                    mag = p.get(); if(flags&(1<<5)) mag |= p.get()<<8;
-                    if(flags&(1<<6))
-                    {
-                        dir = p.get(); dir |= p.get()<<8;
-                        vecfromyawpitch(dir%360, clamp(dir/360, 0, 180)-90, 1, 0, falling);
-                    }
-                    else falling = vec(0, 0, -1);
-                    falling.mul(mag/DVELF);
-                }
-                else falling = vec(0, 0, 0);
                 int seqcolor = (physstate>>3)&1;
                 fpsent *d = getclient(cn);
                 if(!d || d->lifesequence < 0 || seqcolor!=(d->lifesequence&1) || d->state==CS_DEAD) continue;
@@ -1144,12 +1117,15 @@ namespace game
                 d->roll = roll;
                 d->move = (physstate>>4)&2 ? -1 : (physstate>>4)&1;
                 d->strafe = (physstate>>6)&2 ? -1 : (physstate>>6)&1;
+                d->jumping = flags & (1<<4);
                 vec oldpos(d->o);
-                d->o = o;
-                d->o.z += d->eyeheight;
-                d->vel = vel;
-                d->falling = falling;
-                d->physstate = physstate&7;
+                if(allowmove(d))
+                {
+                    d->o = o;
+                    d->o.z += d->eyeheight;
+                    d->vel = vel;
+                    d->physstate = physstate&7;
+                }
                 updatephysstate(d);
                 updatepos(d);
                 if(smoothmove && d->smoothmillis>=0 && oldpos.dist(d->o) < smoothdist)
@@ -1208,8 +1184,16 @@ namespace game
             else d->state = getint(p);
             d->frags = getint(p);
             d->flags = getint(p);
-            if(d==player1) getint(p);
-            else d->quadmillis = getint(p);
+            if(d==player1)
+            {
+                getint(p);
+                getint(p);
+            }
+            else
+            {
+                d->quad.millis = getint(p);
+                d->boost.millis = getint(p);
+            }
         }
         d->lifesequence = getint(p);
         d->health = getint(p);
@@ -1219,13 +1203,14 @@ namespace game
         if(resume && d==player1)
         {
             getint(p);
-            loopi(GUN_PISTOL-GUN_SG+1) getint(p);
+            loopi((GUN_PISTOL-GUN_SG+1) * 2) getint(p);
         }
         else
         {
             int gun = getint(p);
             d->gunselect = clamp(gun, int(GUN_FIST), int(GUN_PISTOL));
             loopi(GUN_PISTOL-GUN_SG+1) d->ammo[GUN_SG+i] = getint(p);
+            loopi(GUN_PISTOL-GUN_SG+1) d->magazine[GUN_SG+i] = getint(p);
         }
     }
 
@@ -1328,6 +1313,14 @@ namespace game
                 if(t->state!=CS_DEAD && t->state!=CS_SPECTATOR)
                     particle_textcopy(t->abovehead(), text, PART_TEXT, 2000, 0x6496FF, 4.0f, -8);
                 conoutf(CON_TEAMCHAT, "%s:\f1 %s", colorname(t), text);
+                break;
+            }
+
+            case N_RESTARTGAME:
+            {
+                // dont startgame(), it loads map
+                entities::spawnitems();
+                startgame();
                 break;
             }
 
@@ -1444,6 +1437,7 @@ namespace game
             case N_SPAWNSTATE:
             {
                 int scn = getint(p);
+                int ent = getint(p);
                 fpsent *s = getclient(scn);
                 if(!s) { parsestate(NULL, p); break; }
                 if(s->state==CS_DEAD && s->lastpain) saveragdoll(s);
@@ -1455,7 +1449,14 @@ namespace game
                 s->respawn();
                 parsestate(s, p);
                 s->state = CS_ALIVE;
-                if(cmode) cmode->pickspawn(s);
+                if(ent >= 0 && ent < entities::ents.length())
+                {
+                    extentity *spawn = entities::ents[ent];
+                    s->o = spawn->o;
+                    s->yaw = spawn->attr1;
+                    s->pitch = 0;
+                    entinmap(s);
+                }
                 else findplayerspawn(s);
                 if(s == player1)
                 {
@@ -1468,21 +1469,30 @@ namespace game
                 break;
             }
 
+            case N_RELOAD:
+            {
+                int cn = getint(p), gun = getint(p);
+                fpsent *s = getclient(cn);
+                if(!s || gun < GUN_FIST || gun >= NUMGUNS) break;
+                s->reload(gun);
+                break;
+            }
+
             case N_SHOTFX:
             {
-                int scn = getint(p), gun = getint(p), id = getint(p);
+                int scn = getint(p), gun = getint(p), charge = getint(p), id = getint(p);
                 vec from, to;
                 loopk(3) from[k] = getint(p)/DMF;
                 loopk(3) to[k] = getint(p)/DMF;
                 fpsent *s = getclient(scn);
                 if(!s) break;
-                if(gun>GUN_FIST && gun<=GUN_PISTOL && s->ammo[gun]) s->ammo[gun]--;
+                if(gun>GUN_FIST && gun<=GUN_PISTOL && s->ammosource(gun)) s->ammosource(gun)--;
                 s->gunselect = clamp(gun, (int)GUN_FIST, (int)GUN_PISTOL);
                 s->gunwait = guns[s->gunselect].attackdelay;
                 int prevaction = s->lastaction;
                 s->lastaction = lastmillis;
                 s->lastattackgun = s->gunselect;
-                shoteffects(s->gunselect, from, to, s, false, id, prevaction);
+                shoteffects(s->gunselect, from, to, s, false, id, prevaction, charge);
                 break;
             }
 
@@ -1494,6 +1504,7 @@ namespace game
                 explodeeffects(gun, e, false, id);
                 break;
             }
+
             case N_DAMAGE:
             {
                 int tcn = getint(p),
@@ -1526,6 +1537,7 @@ namespace game
                 int vcn = getint(p), acn = getint(p), frags = getint(p), tfrags = getint(p);
                 fpsent *victim = getclient(vcn),
                        *actor = getclient(acn);
+                int gun = getint(p);
                 if(!actor) break;
                 actor->frags = frags;
                 if(m_teammode) setteaminfo(actor->team, tfrags);
@@ -1535,7 +1547,7 @@ namespace game
                     particle_textcopy(actor->abovehead(), ds, PART_TEXT, 2000, 0x32FF64, 4.0f, -8);
                 }
                 if(!victim) break;
-                killed(victim, actor);
+                killed(victim, actor, gun);
                 break;
             }
 
@@ -1753,6 +1765,14 @@ namespace game
                 conoutf("%s", text);
                 break;
 
+            case N_BROADCAST:
+            {
+                int duration = getint(p);
+                getstring(text, p);
+                showbroadcast(text, duration);
+                break;
+            }
+
             case N_SENDDEMOLIST:
             {
                 int demos = getint(p);
@@ -1868,6 +1888,7 @@ namespace game
             #include "capture.h"
             #include "ctf.h"
             #include "collect.h"
+            #include "elimination.h"
             #undef PARSEMESSAGES
 
             case N_ANNOUNCE:
@@ -2021,12 +2042,12 @@ namespace game
     }
     COMMAND(stopdemo, "");
 
-    void recorddemo(int val)
+    void recorddemo()
     {
         if(remote && player1->privilege<PRIV_MASTER) return;
-        addmsg(N_RECORDDEMO, "ri", val);
+        addmsg(N_RECORDDEMO, "r");
     }
-    ICOMMAND(recorddemo, "i", (int *val), recorddemo(*val));
+    COMMAND(recorddemo, "");
 
     void cleardemos(int val)
     {

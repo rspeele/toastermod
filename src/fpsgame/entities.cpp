@@ -183,7 +183,7 @@ namespace entities
         if(d==player1) switch(type)
         {
             case I_BOOST:
-                conoutf(CON_GAMEINFO, "\f2you have a permanent +10 health bonus! (%d)", d->maxhealth);
+                conoutf(CON_GAMEINFO, "\f2you have boosted health!");
                 playsound(S_V_BOOST, NULL, NULL, 0, 0, 0, -1, 0, 3000);
                 break;
 
@@ -281,6 +281,19 @@ namespace entities
         }
     }
 
+
+    // convert jumppad parameters to a velocity to impart
+    const float asqrtf(float x)
+    {
+        return (x < 0 ? -1 : 1) * sqrtf(abs(x));
+    }
+    const vec jumppadvel(int x, int y, int z)
+    {
+        const float zfac = 42.5f;
+        const float xyfac = 35.0f;
+        return vec(asqrtf((int)(char)x) * xyfac, asqrtf((int)(char)y) * xyfac, asqrtf(z) * zfac);
+    }
+
     void trypickup(int n, fpsent *d)
     {
         switch(ents[n]->type)
@@ -321,12 +334,12 @@ namespace entities
                 d->lastpickup = ents[n]->type;
                 d->lastpickupmillis = lastmillis;
                 jumppadeffects(d, n, true);
-                vec v((int)(char)ents[n]->attr3*10.0f, (int)(char)ents[n]->attr2*10.0f, ents[n]->attr1*12.5f);
+                vec v = jumppadvel(ents[n]->attr3, ents[n]->attr2, ents[n]->attr1);
                 if(d->ai) d->ai->becareful = true;
-				d->falling = vec(0, 0, 0);
 				d->physstate = PHYS_FALL;
                 d->timeinair = 1;
-                d->vel = v;
+                d->vel.z = 0;
+                d->vel.add(v);
                 break;
             }
         }
@@ -346,23 +359,33 @@ namespace entities
         }
     }
 
-    void checkquad(int time, fpsent *d)
+    void checkpowerup(int time, fpsent *d)
     {
-        if(d->quadmillis && (d->quadmillis -= time)<=0)
+        if (d->quad.update(time, d))
         {
-            d->quadmillis = 0;
             playsound(S_PUPOUT, d==player1 ? NULL : &d->o);
             if(d==player1) conoutf(CON_GAMEINFO, "\f2quad damage is over");
+        }
+        if (d->boost.update(time, d))
+        {
+            playsound(S_PUPOUT, d==player1 ? NULL : &d->o);
+            if(d==player1) conoutf(CON_GAMEINFO, "\f2health boost is over");
         }
     }
 
     void putitems(packetbuf &p)            // puts items in network stream and also spawns them locally
     {
         putint(p, N_ITEMLIST);
-        loopv(ents) if(ents[i]->type>=I_SHELLS && ents[i]->type<=I_QUAD && (!m_noammo || ents[i]->type<I_SHELLS || ents[i]->type>I_CARTRIDGES))
+        loopv(ents) if(server::wantentity(ents[i]->type))
         {
             putint(p, i);
             putint(p, ents[i]->type);
+            loopj(3) putint(p, (int)(ents[i]->o[j] * DMF));
+            putint(p, ents[i]->attr1);
+            putint(p, ents[i]->attr2);
+            putint(p, ents[i]->attr3);
+            putint(p, ents[i]->attr4);
+            putint(p, ents[i]->attr5);
         }
         putint(p, -1);
     }
@@ -557,7 +580,6 @@ namespace entities
                     e.lasttrigger = lastmillis;
                     setuptriggerflags(e);
                     if(checktriggertype(e.attr3, TRIG_RUMBLE)) playsound(S_RUMBLE, &e.o);
-                    if(checktriggertype(e.attr3, TRIG_ENDSP)) endsp(false);
                     if(e.attr4) doleveltrigger(e.attr4, 1);
                     break;
                 case TRIGGERED:
@@ -580,7 +602,6 @@ namespace entities
                     e.lasttrigger = lastmillis;
                     setuptriggerflags(e);
                     if(checktriggertype(e.attr3, TRIG_RUMBLE)) playsound(S_RUMBLE, &e.o);
-                    if(checktriggertype(e.attr3, TRIG_ENDSP)) endsp(false);
                     if(e.attr4) doleveltrigger(e.attr4, 0);
                     break;
             }

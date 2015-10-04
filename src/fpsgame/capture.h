@@ -777,12 +777,17 @@ ICOMMAND(insidebases, "", (),
     }
     buf.add('\0');
     result(buf.getbuf());
-}); 
-    
+});
+
 #else
     bool notgotbases;
 
     captureservmode() : captures(0), notgotbases(false) {}
+
+    int pickspawn(clientinfo *ci)
+    {
+        return pickplayerspawn(ci);
+    }
 
     void reset(bool empty)
     {

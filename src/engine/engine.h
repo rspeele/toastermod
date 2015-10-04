@@ -400,6 +400,7 @@ extern void checksleep(int millis);
 extern void clearsleep(bool clearoverrides = true);
 
 // console
+extern bool consoleprompt();
 extern void keypress(int code, bool isdown, int cooked);
 extern int rendercommand(int x, int y, int w);
 extern int renderconsole(int w, int h, int abovehud);
@@ -429,6 +430,15 @@ enum
 extern bool initwarning(const char *desc, int level = INIT_RESET, int type = CHANGE_GFX);
 
 extern bool grabinput, minimized;
+
+namespace rawinput
+{
+    extern bool enabled;
+    extern int debugrawmouse;
+    void pick(const char *name);
+    void release();
+    void flush();
+}
 
 extern void pushevent(const SDL_Event &e);
 extern bool interceptkey(int sym);

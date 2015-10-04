@@ -213,7 +213,7 @@ struct ragdolldata
     {
         extern int ragdolltimestepmin;
         float ts = ragdolltimestepmin/1000.0f;
-        loopv(skel->verts) (verts[i].oldpos = verts[i].pos).sub(vec(d->vel).add(d->falling).mul(ts));
+        loopv(skel->verts) (verts[i].oldpos = verts[i].pos).sub(vec(d->vel).mul(ts));
         timestep = ts;
 
         calctris();

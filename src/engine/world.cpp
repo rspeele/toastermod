@@ -1125,20 +1125,20 @@ void entattr(int *attr, int *val, int *numargs)
 COMMAND(enttype, "sN");
 COMMAND(entattr, "iiN");
 
-int findentity(int type, int index, int attr1, int attr2)
+int findentity(int type, int index, int attr1, int attr2, int attr3)
 {
     const vector<extentity *> &ents = entities::getents();
     if(index > ents.length()) index = ents.length();
     else for(int i = index; i<ents.length(); i++) 
     {
         extentity &e = *ents[i];
-        if(e.type==type && (attr1<0 || e.attr1==attr1) && (attr2<0 || e.attr2==attr2))
+        if(e.type==type && (attr1<0 || e.attr1==attr1) && (attr2<0 || e.attr2==attr2) && (attr3<0 || e.attr3==attr3))
             return i;
     }
     loopj(index)
     {
         extentity &e = *ents[j];
-        if(e.type==type && (attr1<0 || e.attr1==attr1) && (attr2<0 || e.attr2==attr2))
+        if(e.type==type && (attr1<0 || e.attr1==attr1) && (attr2<0 || e.attr2==attr2) && (attr3<0 || e.attr3==attr3))
             return j;
     }
     return -1;
@@ -1146,13 +1146,13 @@ int findentity(int type, int index, int attr1, int attr2)
 
 int spawncycle = -1;
 
-void findplayerspawn(dynent *d, int forceent, int tag)   // place at random spawn. also used by monsters!
+void findplayerspawn(dynent *d, int forceent, int tag, int arena)   // place at random spawn. also used by monsters!
 {
     int pick = forceent;
     if(pick<0)
     {
         int r = rnd(10)+1;
-        loopi(r) spawncycle = findentity(ET_PLAYERSTART, spawncycle+1, -1, tag);
+        loopi(r) spawncycle = findentity(ET_PLAYERSTART, spawncycle+1, -1, tag, arena);
         pick = spawncycle;
     }
     if(pick>=0)
@@ -1165,15 +1165,19 @@ void findplayerspawn(dynent *d, int forceent, int tag)   // place at random spaw
             d->o = ents[attempt]->o;
             d->yaw = ents[attempt]->attr1;
             if(entinmap(d, true)) break;
-            attempt = findentity(ET_PLAYERSTART, attempt+1, -1, tag);
+            attempt = findentity(ET_PLAYERSTART, attempt+1, -1, tag, arena);
             if(attempt<0 || attempt==pick)
             {
                 d->o = ents[pick]->o;
                 d->yaw = ents[pick]->attr1;
                 entinmap(d);
                 break;
-            }    
+            }
         }
+    }
+    else if(arena != 0) // fall back to default arena
+    {
+        findplayerspawn(d, forceent, tag, 0);
     }
     else
     {

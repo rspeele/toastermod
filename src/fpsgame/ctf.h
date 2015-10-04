@@ -1,7 +1,7 @@
 #ifndef PARSEMESSAGES
 
-#define ctfteamflag(s) (!strcmp(s, "good") ? 1 : (!strcmp(s, "evil") ? 2 : 0))
-#define ctfflagteam(i) (i==1 ? "good" : (i==2 ? "evil" : NULL))
+#define ctfteamflag(s) (!strcmp(s, server::TEAM_A) ? 1 : (!strcmp(s, server::TEAM_B) ? 2 : 0))
+#define ctfflagteam(i) (i==1 ? server::TEAM_A : (i==2 ? server::TEAM_B : NULL))
 
 #ifdef SERVMODE
 VAR(ctftkpenalty, 0, 1, 1);
@@ -249,6 +249,12 @@ struct ctfclientmode : clientmode
             spawnflag(i);
             sendf(-1, 1, "ri6", N_RESETFLAG, i, ++f.version, f.spawnindex, 0, 0);
         }
+    }
+
+    int pickspawn(clientinfo *ci)
+    {
+        //FIXME: implement pickholdspawn for server-side
+        return pickplayerspawn(ci, m_hold ? 0 : ctfteamflag(ci->team));
     }
 
     void setup()
@@ -500,7 +506,7 @@ struct ctfclientmode : clientmode
         {
             loopv(flags) if(flags[i].owner == d)
             {
-                int x = HICON_X + 3*HICON_STEP + (d->quadmillis ? HICON_SIZE + HICON_SPACE : 0);
+                int x = HICON_X + 3*HICON_STEP + (d->quad.millis ? HICON_SIZE + HICON_SPACE : 0);
                 drawicon(m_hold ? HICON_NEUTRAL_FLAG : (flags[i].team==ctfteamflag(player1->team) ? HICON_BLUE_FLAG : HICON_RED_FLAG), x, HICON_Y);
                 if(m_hold)
                 {
@@ -973,12 +979,6 @@ struct ctfclientmode : clientmode
             if(entinmap(d, true)) return true;
         }
         return false;
-    }
-
-    void pickspawn(fpsent *d)
-    {
-        if(!m_hold || !pickholdspawn(d))
-            findplayerspawn(d, -1, m_hold ? 0 : ctfteamflag(d->team));
     }
 
 	bool aihomerun(fpsent *d, ai::aistate &b)
