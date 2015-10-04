@@ -106,6 +106,7 @@ CLIENT_OBJS= \
 	engine/octarender.o \
 	engine/physics.o \
 	engine/pvs.o \
+	engine/raw.o \
 	engine/rendergl.o \
 	engine/rendermodel.o \
 	engine/renderparticles.o \
@@ -125,8 +126,6 @@ CLIENT_OBJS= \
 	fpsgame/client.o \
 	fpsgame/entities.o \
 	fpsgame/fps.o \
-	fpsgame/monster.o \
-	fpsgame/movable.o \
 	fpsgame/render.o \
 	fpsgame/scoreboard.o \
 	fpsgame/server.o \
@@ -375,6 +374,9 @@ engine/pvs.o: engine/engine.h shared/cube.h shared/tools.h shared/geom.h
 engine/pvs.o: shared/ents.h shared/command.h shared/glexts.h shared/glemu.h
 engine/pvs.o: shared/iengine.h shared/igame.h engine/world.h engine/octa.h
 engine/pvs.o: engine/lightmap.h engine/bih.h engine/texture.h engine/model.h
+
+engine/raw.o: engine/engine.h shared/tools.h shared/geom.h
+
 engine/rendergl.o: engine/engine.h shared/cube.h shared/tools.h shared/geom.h
 engine/rendergl.o: shared/ents.h shared/command.h shared/glexts.h
 engine/rendergl.o: shared/glemu.h shared/iengine.h shared/igame.h
@@ -468,6 +470,9 @@ fpsgame/client.o: fpsgame/game.h shared/cube.h shared/tools.h shared/geom.h
 fpsgame/client.o: shared/ents.h shared/command.h shared/glexts.h
 fpsgame/client.o: shared/glemu.h shared/iengine.h shared/igame.h fpsgame/ai.h
 fpsgame/client.o: fpsgame/capture.h fpsgame/ctf.h fpsgame/collect.h
+
+fpsgame/client.o: fpsgame/elimination.h
+
 fpsgame/entities.o: fpsgame/game.h shared/cube.h shared/tools.h shared/geom.h
 fpsgame/entities.o: shared/ents.h shared/command.h shared/glexts.h
 fpsgame/entities.o: shared/glemu.h shared/iengine.h shared/igame.h
@@ -475,14 +480,6 @@ fpsgame/entities.o: fpsgame/ai.h
 fpsgame/fps.o: fpsgame/game.h shared/cube.h shared/tools.h shared/geom.h
 fpsgame/fps.o: shared/ents.h shared/command.h shared/glexts.h shared/glemu.h
 fpsgame/fps.o: shared/iengine.h shared/igame.h fpsgame/ai.h
-fpsgame/monster.o: fpsgame/game.h shared/cube.h shared/tools.h shared/geom.h
-fpsgame/monster.o: shared/ents.h shared/command.h shared/glexts.h
-fpsgame/monster.o: shared/glemu.h shared/iengine.h shared/igame.h
-fpsgame/monster.o: fpsgame/ai.h
-fpsgame/movable.o: fpsgame/game.h shared/cube.h shared/tools.h shared/geom.h
-fpsgame/movable.o: shared/ents.h shared/command.h shared/glexts.h
-fpsgame/movable.o: shared/glemu.h shared/iengine.h shared/igame.h
-fpsgame/movable.o: fpsgame/ai.h
 fpsgame/render.o: fpsgame/game.h shared/cube.h shared/tools.h shared/geom.h
 fpsgame/render.o: shared/ents.h shared/command.h shared/glexts.h
 fpsgame/render.o: shared/glemu.h shared/iengine.h shared/igame.h fpsgame/ai.h
@@ -495,6 +492,9 @@ fpsgame/server.o: shared/ents.h shared/command.h shared/glexts.h
 fpsgame/server.o: shared/glemu.h shared/iengine.h shared/igame.h fpsgame/ai.h
 fpsgame/server.o: fpsgame/capture.h fpsgame/ctf.h fpsgame/collect.h
 fpsgame/server.o: fpsgame/extinfo.h fpsgame/aiman.h
+
+fpsgame/server.o: fpsgame/elimination.h
+
 fpsgame/waypoint.o: fpsgame/game.h shared/cube.h shared/tools.h shared/geom.h
 fpsgame/waypoint.o: shared/ents.h shared/command.h shared/glexts.h
 fpsgame/waypoint.o: shared/glemu.h shared/iengine.h shared/igame.h
@@ -541,6 +541,7 @@ fpsgame/server-standalone.o: shared/geom.h shared/ents.h shared/command.h
 fpsgame/server-standalone.o: shared/iengine.h shared/igame.h fpsgame/ai.h
 fpsgame/server-standalone.o: fpsgame/capture.h fpsgame/ctf.h
 fpsgame/server-standalone.o: fpsgame/collect.h fpsgame/extinfo.h
+fpsgame/server-standalone.o: fpsgame/elimination.h
 fpsgame/server-standalone.o: fpsgame/aiman.h
 engine/master-standalone.o: shared/cube.h shared/tools.h shared/geom.h
 engine/master-standalone.o: shared/ents.h shared/command.h shared/iengine.h
