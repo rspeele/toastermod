@@ -101,7 +101,11 @@ COMMAND(fontalias, "ss");
 bool setfont(const char *name)
 {
     font *f = fonts.access(name);
-    if(!f) return false;
+    if(!f)
+    {
+        conoutf(CON_ERROR, "missing font: %s", name);
+        return false;
+    }
     curfont = f;
     return true;
 }
