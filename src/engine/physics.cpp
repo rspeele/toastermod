@@ -1411,7 +1411,7 @@ bool move(physent *d, vec &dir)
 bool bounce(physent *d, float secs, float elasticity, float waterfric, float grav, physent *safe, bool players)
 {
     // make sure bouncers don't start inside geometry
-    if(d->physstate!=PHYS_BOUNCE && !collide(d, vec(0, 0, 0), 0, false))
+    if(d->physstate!=PHYS_BOUNCE && collide(d, vec(0, 0, 0), 0, false))
     {
         if(safe) // assume safe is the originator of the bouncer and use that to escape geometry
         {
@@ -1442,7 +1442,7 @@ bool bounce(physent *d, float secs, float elasticity, float waterfric, float gra
         vec dir(d->vel);
         dir.mul(secs);
         d->o.add(dir);
-        if(collide(d, dir, 0.0f, players, safe))
+        if(!collide(d, dir, 0.0f, players, safe))
         {
             if(collideinside)
             {
@@ -1465,7 +1465,7 @@ bool bounce(physent *d, float secs, float elasticity, float waterfric, float gra
         if(d->o == old) return !collideplayer;
         d->physstate = PHYS_BOUNCE;
     }
-    return collideplayer!=0 && collideplayer!=safe;
+    return collideplayer!=NULL && collideplayer!=safe;
 }
 
 void avoidcollision(physent *d, const vec &dir, physent *obstacle, float space)
