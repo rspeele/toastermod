@@ -1076,6 +1076,7 @@ void slideagainst(physent *d, vec &dir, const vec &obstacle, bool foundfloor, bo
     }
     else
     {
+        d->wallcollidedir = dir;
         vec oldvel(d->vel);
         d->vel.project(wall);
         recalcdir(d, oldvel, dir);
@@ -1302,7 +1303,11 @@ void landing(physent *d, vec &dir, const vec &floor, bool collided)
     if((d->physstate!=PHYS_STEP_UP && d->physstate!=PHYS_STEP_DOWN) || !collided)
         d->physstate = floor.z >= FLOORZ ? PHYS_FLOOR : PHYS_SLOPE;
     d->floor = floor;
-    if(air) brakevel(d);
+    if(air)
+    {
+        brakevel(d);
+        d->wallcollidedir = vec(0);
+    }
 }
 
 bool findfloor(physent *d, bool collided, const vec &obstacle, bool &slide, vec &floor)
@@ -1397,10 +1402,21 @@ bool move(physent *d, vec &dir)
     vec floor(0, 0, 0);
     bool slide = collided,
          found = findfloor(d, collided, obstacle, slide, floor);
+    if (!slide && d->physstate == PHYS_FALL && d->jumping && !d->wallcollidedir.iszero())
+    {
+        physent copy = *d;
+        copy.o.add(copy.wallcollidedir);
+        if (collide(&copy, copy.wallcollidedir))
+        {
+            obstacle = collidewall;
+            slide = true;
+            if(trystepup(&copy, dir, obstacle, STAIRHEIGHT, collidewall)) return true;
+        }
+    }
+
     if(slide || (!collided && floor.z > 0 && floor.z < WALLZ))
     {
         slideagainst(d, dir, slide ? obstacle : floor, found, slidecollide);
-        //if(d->type == ENT_AI || d->type == ENT_INANIMATE)
         d->blocked = true;
     }
     if(found) landing(d, dir, floor, collided);

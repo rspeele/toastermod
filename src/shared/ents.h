@@ -62,6 +62,7 @@ enum { COLLIDE_NONE = 0, COLLIDE_ELLIPSE, COLLIDE_OBB, COLLIDE_ELLIPSE_PRECISE }
 struct physent                                  // base entity type, can be affected by physics
 {
     vec o, vel;                                 // origin, velocity
+    vec wallcollidedir;                         // direction before midair impact with wall
     vec deltapos, newpos;                       // movement interpolation
     float yaw, pitch, roll;
     float maxspeed;                             // cubes per second, 90 for player
