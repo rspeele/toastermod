@@ -457,6 +457,8 @@ const float STAIRHEIGHT = 4.1f;
 const float FLOORZ = 0.867f;
 const float SLOPEZ = 0.5f;
 const float WALLZ = 0.2f;
+const int WJFADEMAX = 750;
+const int WJDELAY = 350;
 extern const float JUMPVEL = 95.0f;
 extern const float GRAVITY = 270.0f;
 
@@ -1039,6 +1041,11 @@ void recalcdir(physent *d, const vec &oldvel, vec &dir)
     }
 }
 
+bool wantswalljump(physent *d)
+{
+    return d->jumping && d->physstate == PHYS_FALL && WJFADEMAX - d->wjfadetime >= WJDELAY;
+}
+
 void walljump(physent *d, vec &dir, const vec &wall)
 {
     vec oldvel(d->vel);
@@ -1068,7 +1075,7 @@ void walljump(physent *d, vec &dir, const vec &wall)
     }
     recalcdir(d, oldvel, dir);
     d->jumping = false;
-    d->wjfadetime = 750;
+    d->wjfadetime = WJFADEMAX;
     game::physicstrigger(d, true, 1, 0);
 }
 
@@ -1080,7 +1087,7 @@ void slideagainst(physent *d, vec &dir, const vec &obstacle, bool foundfloor, bo
         wall.z = 0;
         if(!wall.iszero()) wall.normalize();
     }
-    if (d->jumping)
+    if (wantswalljump(d))
     {
         walljump(d, dir, wall);
     }
@@ -1412,7 +1419,7 @@ bool move(physent *d, vec &dir)
     vec floor(0, 0, 0);
     bool slide = collided,
          found = findfloor(d, collided, obstacle, slide, floor);
-    if (!slide && d->physstate == PHYS_FALL && d->jumping && !d->wallcollidedir.iszero())
+    if (!slide && wantswalljump(d) && !d->wallcollidedir.iszero()) // check for walljump
     {
         physent copy = *d;
         copy.o.add(copy.wallcollidedir);
