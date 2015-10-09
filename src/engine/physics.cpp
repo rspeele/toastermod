@@ -1050,28 +1050,20 @@ void walljump(physent *d, vec &dir, const vec &wall)
 {
     vec oldvel(d->vel);
     const float oldspeed = oldvel.magnitude2();
+    const float targetspeed
+        = oldspeed >= d->maxspeed
+        ? oldspeed
+        : oldspeed + (d->maxspeed - oldspeed) / 2;
     if (oldspeed > 0)
     {
-        d->vel.z = 0;
-        d->vel.reflect(wall); // we bounce off the wall
-        // but the wall contributes a bit more, so we can't go nearly
-        // straight when hitting the wall at a shallow angle.
-        d->vel.add(vec(wall).mul(oldspeed * 0.5f));
-        // then we scale back to keep the original oldspeed
-        d->vel.mul(oldspeed / d->vel.magnitude2());
-        if (oldspeed < d->maxspeed)
-        {
-            // if we're below regular movement speed, we deserve an extra boost
-            // since we pushed off the wall.
-            const float current = d->vel.dot(wall); // how fast are we currently moving away from the wall?
-            const float add = d->maxspeed - current; // how much could we add to get to full movement speed?
-            d->vel.add(vec(wall).mul(add * 0.5f)); // we get half of that as a boost
-            d->vel.z = JUMPVEL * max(oldspeed / d->maxspeed, 0.7f); // impulse upwards is reduced
-        }
-        else
-        {
-            d->vel.z = JUMPVEL; // full jump upwards
-        }
+        d->vel.z = 0.0f;
+        d->vel.reflect(wall); // bounce off wall
+        d->vel.add(vec(wall).mul(d->maxspeed)); // wall contributes almost as much, maybe more w/ low oldspeed
+        d->vel.mul(targetspeed / d->vel.magnitude()); // normalize to target speed
+        d->vel.z
+            = oldspeed >= d->maxspeed
+            ? JUMPVEL
+            : JUMPVEL * max(oldspeed / d->maxspeed, 0.7f);
     }
     recalcdir(d, oldvel, dir);
     d->jumping = false;
