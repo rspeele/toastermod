@@ -373,7 +373,7 @@ struct aviwriter
         endlistchunk(); // LIST odml
 
         listchunk("LIST", "INFO");
-        const char *software = "Tersafari";
+        const char *software = "ToasterMod";
         writechunk("ISFT", software, strlen(software)+1);
         endlistchunk(); // LIST INFO
         

@@ -282,13 +282,13 @@ static const int msgsizes[] =               // size inclusive message token, 0 f
     -1
 };
 
-#define TERSAFARI_LANINFO_PORT 29784
-#define TERSAFARI_SERVER_PORT 29785
-#define TERSAFARI_SERVINFO_PORT 29786
-#define TERSAFARI_MASTER_PORT 29787
+#define TOASTERMOD_LANINFO_PORT 29784
+#define TOASTERMOD_SERVER_PORT 29785
+#define TOASTERMOD_SERVINFO_PORT 29786
+#define TOASTERMOD_MASTER_PORT 29787
 #define PROTOCOL_VERSION 0              // bump when protocol changes
 #define DEMO_VERSION 1                  // bump when demo format changes
-#define DEMO_MAGIC "TERSAFARI_DEMO"
+#define DEMO_MAGIC "TOASTERMOD_DEMO"
 
 struct demoheader
 {

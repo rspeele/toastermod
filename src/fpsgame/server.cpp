@@ -1335,8 +1335,8 @@ namespace server
         else
         {
             lilswap(&hdr.version, 2);
-            if(hdr.version!=DEMO_VERSION) formatstring(msg, "demo \"%s\" requires an %s version of Tersafari", file, hdr.version<DEMO_VERSION ? "older" : "newer");
-            else if(hdr.protocol!=PROTOCOL_VERSION) formatstring(msg, "demo \"%s\" requires an %s version of Tersafari", file, hdr.protocol<PROTOCOL_VERSION ? "older" : "newer");
+            if(hdr.version!=DEMO_VERSION) formatstring(msg, "demo \"%s\" requires an %s version of ToasterMod", file, hdr.version<DEMO_VERSION ? "older" : "newer");
+            else if(hdr.protocol!=PROTOCOL_VERSION) formatstring(msg, "demo \"%s\" requires an %s version of ToasterMod", file, hdr.protocol<PROTOCOL_VERSION ? "older" : "newer");
         }
         if(msg[0])
         {
@@ -3962,11 +3962,11 @@ namespace server
         }
     }
 
-    int laninfoport() { return TERSAFARI_LANINFO_PORT; }
-    int serverinfoport(int servport) { return servport < 0 ? TERSAFARI_SERVINFO_PORT : servport+1; }
-    int serverport(int infoport) { return infoport < 0 ? TERSAFARI_SERVER_PORT : infoport-1; }
+    int laninfoport() { return TOASTERMOD_LANINFO_PORT; }
+    int serverinfoport(int servport) { return servport < 0 ? TOASTERMOD_SERVINFO_PORT : servport+1; }
+    int serverport(int infoport) { return infoport < 0 ? TOASTERMOD_SERVER_PORT : infoport-1; }
     const char *defaultmaster() { return "master.airstrafe.com"; }
-    int masterport() { return TERSAFARI_MASTER_PORT; }
+    int masterport() { return TOASTERMOD_MASTER_PORT; }
     int numchannels() { return 3; }
 
     #include "extinfo.h"
