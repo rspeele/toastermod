@@ -26,7 +26,7 @@ ifneq (,$(STRIP))
 endif
 endif
 WINLIB=lib64
-WINBIN=../bin64
+WINBIN=../toastermod_bin64
 override CXX+= -m64
 override WINDRES+= -F pe-x86-64
 else
@@ -38,7 +38,7 @@ ifneq (,$(STRIP))
 endif
 endif
 WINLIB=lib
-WINBIN=../bin
+WINBIN=../toastermod_bin
 override CXX+= -m32
 override WINDRES+= -F pe-i386
 endif
@@ -177,7 +177,7 @@ default: all
 all: client server
 
 clean:
-	-$(RM) $(CLIENT_PCH) $(CLIENT_OBJS) $(SERVER_MASTER_OBJS) sauer_client sauer_server sauer_master
+	-$(RM) $(CLIENT_PCH) $(CLIENT_OBJS) $(SERVER_MASTER_OBJS) toastermod_client toastermod_server toastermod_master
 
 $(filter-out shared/%,$(CLIENT_PCH)): $(filter shared/%,$(CLIENT_PCH))
 
@@ -198,25 +198,25 @@ $(SERVER_MASTER_OBJS): CXXFLAGS += $(SERVER_INCLUDES)
 ifneq (,$(findstring MINGW,$(PLATFORM)))
 client: $(CLIENT_OBJS)
 	$(WINDRES) -I vcpp -i vcpp/mingw.rc -J rc -o vcpp/mingw.res -O coff
-	$(CXX) $(CXXFLAGS) -o $(WINBIN)/sauerbraten.exe vcpp/mingw.res $(CLIENT_OBJS) $(CLIENT_LIBS)
+	$(CXX) $(CXXFLAGS) -o $(WINBIN)/toastermod.exe vcpp/mingw.res $(CLIENT_OBJS) $(CLIENT_LIBS)
 
 server: $(SERVER_OBJS)
 	$(WINDRES) -I vcpp -i vcpp/mingw.rc -J rc -o vcpp/mingw.res -O coff
-	$(CXX) $(CXXFLAGS) -o $(WINBIN)/sauer_server.exe vcpp/mingw.res $(SERVER_OBJS) $(SERVER_LIBS)
+	$(CXX) $(CXXFLAGS) -o $(WINBIN)/toastermod_server.exe vcpp/mingw.res $(SERVER_OBJS) $(SERVER_LIBS)
 
 master: $(MASTER_OBJS)
-	$(CXX) $(CXXFLAGS) -o $(WINBIN)/sauer_master.exe $(MASTER_OBJS) $(MASTER_LIBS)
+	$(CXX) $(CXXFLAGS) -o $(WINBIN)/toastermod_master.exe $(MASTER_OBJS) $(MASTER_LIBS)
 
 install: all
 else
 client:	libenet $(CLIENT_OBJS)
-	$(CXX) $(CXXFLAGS) -o sauer_client $(CLIENT_OBJS) $(CLIENT_LIBS)
+	$(CXX) $(CXXFLAGS) -o toastermod_client $(CLIENT_OBJS) $(CLIENT_LIBS)
 
 server:	libenet $(SERVER_OBJS)
-	$(CXX) $(CXXFLAGS) -o sauer_server $(SERVER_OBJS) $(SERVER_LIBS)
+	$(CXX) $(CXXFLAGS) -o toastermod_server $(SERVER_OBJS) $(SERVER_LIBS)
 
 master: libenet $(MASTER_OBJS)
-	$(CXX) $(CXXFLAGS) -o sauer_master $(MASTER_OBJS) $(MASTER_LIBS)
+	$(CXX) $(CXXFLAGS) -o toastermod_master $(MASTER_OBJS) $(MASTER_LIBS)
 
 shared/cube2font.o: shared/cube2font.c
 	$(CXX) $(CXXFLAGS) -c -o $@ $< `freetype-config --cflags`
@@ -225,8 +225,8 @@ cube2font: shared/cube2font.o
 	$(CXX) $(CXXFLAGS) -o cube2font shared/cube2font.o `freetype-config --libs` -lz
 
 install: all
-	cp sauer_client	../bin_unix/$(PLATFORM_PREFIX)_client
-	cp sauer_server	../bin_unix/$(PLATFORM_PREFIX)_server
+	cp toastermod_client	../bin_unix/$(PLATFORM_PREFIX)_client
+	cp toastermod_server	../bin_unix/$(PLATFORM_PREFIX)_server
 ifneq (,$(STRIP))
 	$(STRIP) ../bin_unix/$(PLATFORM_PREFIX)_client
 	$(STRIP) ../bin_unix/$(PLATFORM_PREFIX)_server
