@@ -446,7 +446,7 @@ struct glinfo : guninfo
         hitpush = 250;
         exprad = 40;
         ttl = 1200;
-        name = "grenadelauncher";
+        name = "beachball";
         file = "gl";
     }
 };
