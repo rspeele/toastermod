@@ -910,7 +910,7 @@ namespace ai
 		}
 		if(jump)
 		{
-			d->jumping = true;
+			d->jumping = JUMP_PENDING;
 			int seed = (111-d->skill)*(d->inwater ? 3 : 5);
 			d->ai->jumpseed = lastmillis+seed+rnd(seed);
 			seed *= b.idle ? 50 : 25;
@@ -1254,7 +1254,8 @@ namespace ai
                 moveplayer(d, 10, false);
             }
         }
-        d->attacking = d->jumping = false;
+        d->attacking = false;
+        d->jumping = JUMP_NONE;
     }
 
 	void avoid()

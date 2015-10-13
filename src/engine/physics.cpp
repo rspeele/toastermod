@@ -1043,7 +1043,7 @@ void recalcdir(physent *d, const vec &oldvel, vec &dir)
 
 bool wantswalljump(physent *d)
 {
-    return d->jumping && d->physstate == PHYS_FALL && WJFADEMAX - d->wjfadetime >= WJDELAY;
+    return d->jumping == JUMP_PENDING && d->physstate == PHYS_FALL && WJFADEMAX - d->wjfadetime >= WJDELAY;
 }
 
 void walljump(physent *d, vec &dir, const vec &wall)
@@ -1066,7 +1066,7 @@ void walljump(physent *d, vec &dir, const vec &wall)
             : JUMPVEL * max(oldspeed / d->maxspeed, 0.7f);
     }
     recalcdir(d, oldvel, dir);
-    d->jumping = false;
+    d->jumping = JUMP_JUMPED;
     d->wjfadetime = WJFADEMAX;
     game::physicstrigger(d, true, 1, 0);
 }
@@ -1735,15 +1735,15 @@ void modifyvelocity(physent *pl, bool local, bool water, bool floating, int curt
     bool allowmove = game::allowmove(pl);
     if(floating)
     {
-        if(pl->jumping && allowmove)
+        if(pl->jumping == JUMP_PENDING && allowmove)
         {
-            pl->jumping = false;
+            pl->jumping = JUMP_JUMPED;
             pl->vel.z = max(pl->vel.z, JUMPVEL);
         }
     }
-    else if((pl->physstate >= PHYS_SLOPE || water) && pl->jumping)
+    else if((pl->physstate >= PHYS_SLOPE || water) && pl->jumping == JUMP_PENDING)
     {
-        pl->jumping = false;
+        pl->jumping = JUMP_JUMPED;
         pl->vel.z += JUMPVEL; // physics impulse upwards
         game::physicstrigger(pl, local, 1, 0);
     }
@@ -2129,7 +2129,7 @@ dir(forward,  move,    1, k_up,    k_down);
 dir(left,     strafe,  1, k_left,  k_right);
 dir(right,    strafe, -1, k_right, k_left);
 
-ICOMMAND(jump,   "D", (int *down), { if(!*down || game::canjump()) player->jumping = *down!=0; });
+ICOMMAND(jump,   "D", (int *down), { if(!*down || game::canjump()) player->jumping = *down ? JUMP_PENDING : JUMP_NONE; });
 ICOMMAND(attack, "D", (int *down), { game::doattack(*down!=0); });
 
 bool entinmap(dynent *d, bool avoidplayers)        // brute force but effective way to find a free spawn spot in the map

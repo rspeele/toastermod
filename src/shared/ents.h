@@ -59,6 +59,8 @@ enum { ENT_PLAYER = 0, ENT_AI, ENT_INANIMATE, ENT_CAMERA, ENT_BOUNCE };
 
 enum { COLLIDE_NONE = 0, COLLIDE_ELLIPSE, COLLIDE_OBB, COLLIDE_ELLIPSE_PRECISE };
 
+enum { JUMP_NONE = 0, JUMP_PENDING, JUMP_JUMPED };
+
 struct physent                                  // base entity type, can be affected by physics
 {
     vec o, vel;                                 // origin, velocity
@@ -73,7 +75,7 @@ struct physent                                  // base entity type, can be affe
     vec floor;                                  // the normal of floor the dynent is on
 
     int inwater;
-    bool jumping;
+    char jumping;                               // one of JUMP_* above
     char move, strafe;
 
     uchar physstate;                            // one of PHYS_* above
@@ -217,7 +219,8 @@ struct dynent : physent                         // animated characters, or chara
                
     void stopmoving()
     {
-        k_left = k_right = k_up = k_down = jumping = false;
+        k_left = k_right = k_up = k_down = false;
+        jumping = JUMP_NONE;
         move = strafe = 0;
     }
         
