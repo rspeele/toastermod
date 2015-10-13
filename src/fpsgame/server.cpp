@@ -675,6 +675,7 @@ namespace server
     stream *demotmp = NULL, *demorecord = NULL, *demoplayback = NULL;
     int nextplayback = 0, demomillis = 0;
 
+    VAR(debugmessages, 0, 0, 1);
     VAR(autodemo, 0, 0, 1);
     VAR(maxdemos, 0, 5, 25);
     VAR(maxdemosize, 0, 16, 31);
@@ -3191,7 +3192,14 @@ namespace server
         #define QUEUE_UINT(n) QUEUE_BUF(putuint(cm->messages, n))
         #define QUEUE_STR(text) QUEUE_BUF(sendstring(text, cm->messages))
         int curmsg;
-        while((curmsg = p.length()) < p.maxlen) switch(type = checktype(getint(p), ci))
+        while((curmsg = p.length()) < p.maxlen)
+        {
+        type = checktype(getint(p), ci);
+        if (debugmessages)
+        {
+            logoutf("from client %s, message type %d\n", ci->name, type);
+        }
+        switch(type)
         {
             case N_POS:
             {
@@ -3959,6 +3967,7 @@ namespace server
                 }
                 break;
             }
+        }
         }
     }
 
