@@ -153,6 +153,7 @@ namespace server
     struct gamestate : fpsstate
     {
         vec o;
+        optional<vec> pendingspawn;
         int state, editstate;
         int lastdeath, deadflush, lastspawn, lifesequence;
         int lastshot;
@@ -1001,6 +1002,7 @@ namespace server
     {
         int best = -1;
         float bestdist = 0.0f;
+        vec bestpos;
         int starts = 0;
         // try to find a spawn far from players
         loopv(sents)
@@ -1013,8 +1015,12 @@ namespace server
             loopvj(clients)
             {
                 clientinfo *oi = clients[j];
-                if(oi == ci || oi->state.state == CS_SPECTATOR || oi->state.health <= 0) continue;
-                float dist = oi->state.o.dist(sent.o);
+                if (oi == ci
+                    || (!oi->state.pendingspawn.hasvalue
+                        && (oi->state.lastspawn < 0
+                            || oi->state.state == CS_SPECTATOR
+                            || oi->state.health <= 0))) continue;
+                float dist = oi->state.pendingspawn.coalesce(oi->state.o).dist(sent.o);
                 if(isteam(ci->team, oi->team)) dist *= 2; // don't worry as much about spawning near teammates
                 close = min(close, dist);
                 any = true;
@@ -1023,6 +1029,7 @@ namespace server
             {
                 best = i;
                 bestdist = close;
+                bestpos = sent.o;
             }
         }
         // if we found spawns, but there were no suitable players to
@@ -1037,12 +1044,14 @@ namespace server
                     if(sents[i].type == PLAYERSTART && (attr2 < 0 || sents[i].attr2 == attr2) && iter-- < 0)
                     {
                         best = i;
+                        bestpos = sents[i].o;
                         break;
                     }
                 }
             } while (best < 0 && iter >= 0);
         }
         if(best >= 0) ci->state.o = sents[best].o;
+        ci->state.pendingspawn = optional<vec>(bestpos);
         return best;
     }
 
@@ -3351,6 +3360,7 @@ namespace server
             {
                 int ls = getint(p), gunselect = getint(p);
                 if(!cq || (cq->state.state!=CS_ALIVE && cq->state.state!=CS_DEAD && cq->state.state!=CS_EDITING) || ls!=cq->state.lifesequence || cq->state.lastspawn<0) break;
+                cq->state.pendingspawn = optional<vec>();
                 cq->state.lastspawn = -1;
                 cq->state.state = CS_ALIVE;
                 cq->state.gunselect = gunselect >= GUN_FIST && gunselect <= GUN_PISTOL ? gunselect : GUN_FIST;
@@ -3660,6 +3670,7 @@ namespace server
                 {
                     if(spinfo->state.state==CS_ALIVE) suicide(spinfo);
                     if(smode) smode->leavegame(spinfo);
+                    spinfo->state.pendingspawn = optional<vec>();
                     spinfo->state.state = CS_SPECTATOR;
                     spinfo->state.timeplayed += lastmillis - spinfo->state.lasttimeplayed;
                     if(!spinfo->local && !spinfo->privilege) aiman::removeai(spinfo);

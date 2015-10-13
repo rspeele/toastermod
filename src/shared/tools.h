@@ -1151,6 +1151,29 @@ template <class T, int SIZE> struct reversequeue : queue<T, SIZE>
     const T &operator[](int offset) const { return queue<T, SIZE>::added(offset); }
 };
 
+template <class T> struct optional
+{
+    T value;
+    bool hasvalue;
+    optional(T setvalue)
+    {
+        value = setvalue;
+        hasvalue = true;
+    }
+    optional()
+    {
+        hasvalue = false;
+    }
+    T coalesce(T other)
+    {
+        return hasvalue ? value : other;
+    }
+    optional<T> coalesce(optional<T> other)
+    {
+        return hasvalue ? *this : other;
+    }
+};
+
 const int islittleendian = 1;
 #ifdef SDL_BYTEORDER
 #define endianswap16 SDL_Swap16
