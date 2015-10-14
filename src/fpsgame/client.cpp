@@ -1117,7 +1117,7 @@ namespace game
                 d->roll = roll;
                 d->move = (physstate>>4)&2 ? -1 : (physstate>>4)&1;
                 d->strafe = (physstate>>6)&2 ? -1 : (physstate>>6)&1;
-                d->jumping = flags & (3<<4);
+                d->jumping = (flags >> 4) & 3;
                 vec oldpos(d->o);
                 if(allowmove(d))
                 {
