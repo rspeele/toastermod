@@ -560,6 +560,7 @@ namespace game
             if(d==h) playsound(S_PAIN6);
             else playsound(S_PAIN1+rnd(5), &d->o);
             d->lastyelp = lastmillis;
+            d->lastpain = lastmillis;
         }
     }
 
