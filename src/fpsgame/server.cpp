@@ -730,6 +730,7 @@ namespace server
         modes.deletearrays();
     }
 
+    VAR(teamdamage, 0, 1, 2); // 0 = no team damage, 1 = all team damage, 2 = team damage with explosions only
     COMMAND(teamkillkickreset, "");
     COMMANDN(teamkillkick, addteamkillkick, "sii");
 
@@ -893,6 +894,7 @@ namespace server
     // forward declare so visible in servmode
     int pickplayerspawn(clientinfo *ci, int attr2 = -1);
     void sendspawn(clientinfo *ci);
+    bool candamagedefault(clientinfo *target, clientinfo *actor, int gun);
 
     struct servmode
     {
@@ -923,6 +925,7 @@ namespace server
         virtual int getteamscore(const char *team) { return 0; }
         virtual void getteamscores(vector<teamscore> &scores) {}
         virtual bool extinfoteam(const char *team, ucharbuf &p) { return false; }
+        virtual bool candamage(clientinfo *target, clientinfo *actor, int gun) { return candamagedefault(target, actor, gun); }
     };
 
     #define SERVMODE 1
@@ -2396,8 +2399,20 @@ namespace server
 
     void startintermission() { gamelimit = min(gamelimit, gamemillis); checkintermission(); }
 
+    bool candamagedefault(clientinfo *target, clientinfo *actor, int gun)
+    {
+        return
+            teamdamage == 1
+            || (teamdamage == 2 && (gun == GUN_RL || gun == GUN_GL))
+            || !isteam(actor->team, target->team);
+    }
+
     void dodamage(clientinfo *target, clientinfo *actor, int damage, int gun, const vec &hitpush = vec(0, 0, 0))
     {
+        if (!(smode ? smode->candamage(target, actor, gun) : candamagedefault(target, actor, gun)))
+        {
+            return; // no effect
+        }
         gamestate &ts = target->state;
         ts.dodamage(damage);
         if(target!=actor && !isteam(target->team, actor->team)) actor->state.damage += damage;

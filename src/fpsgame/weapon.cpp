@@ -379,13 +379,6 @@ namespace game
 
     void hit(int damage, dynent *d, fpsent *at, const vec &vel, int gun, float info1, int info2 = 1, bool headshot = false)
     {
-        if(at==player1 && d!=at)
-        {
-            extern int hitsound;
-            if(hitsound && lasthit != lastmillis) playsound(S_HIT);
-            lasthit = lastmillis;
-        }
-
         if(d->type==ENT_INANIMATE)
         {
             return;
@@ -408,21 +401,6 @@ namespace game
             h.info2 = info2;
             h.headshot = headshot;
             h.dir = f==at ? ivec(0, 0, 0) : ivec(int(vel.x*DNF), int(vel.y*DNF), int(vel.z*DNF));
-            if(at==player1)
-            {
-                damageeffect(damage, f);
-                if (lastmillis - player1->lastyelp >= 800)
-                {
-                    if(f==player1)
-                    {
-                        damageblend(damage);
-                        damagecompass(damage, at ? at->o : f->o);
-                        playsound(S_PAIN6);
-                    }
-                    else playsound(S_PAIN1+rnd(5), &f->o);
-                    player1->lastyelp = lastmillis;
-                }
-            }
         }
     }
 
