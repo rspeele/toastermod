@@ -51,7 +51,7 @@ struct elimclientmode : clientmode
     void setup()
     {
 #ifdef SERVMODE
-        betweenrounds = false;
+        startround();
 #endif
         scores.setsize(0);
     }
