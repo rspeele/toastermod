@@ -177,9 +177,9 @@ struct collectclientmode : clientmode
 
     collectservmode() : notgotbases(false) {}
 
-    int pickspawn(clientinfo *ci)
+    int pickspawn(clientinfo *ci, bool forcerandom)
     {
-        return pickplayerspawn(ci, collectteambase(ci->team));
+        return pickplayerspawn(ci, collectteambase(ci->team), forcerandom);
     }
 
     void reset(bool empty)

@@ -63,10 +63,6 @@ struct elimclientmode : clientmode
         return true;
     }
 #ifdef SERVMODE
-    int pickspawn(clientinfo *ci)
-    {
-        return pickplayerspawn(ci);
-    }
     bool candamage(clientinfo *target, clientinfo *actor, int gun)
     {
         return target == actor || (livefire && servmode::candamage(target, actor, gun));
@@ -86,7 +82,7 @@ struct elimclientmode : clientmode
             if(clients[i]->state.state!=CS_SPECTATOR)
             {
                 clients[i]->state.reassign();
-                sendspawn(clients[i]);
+                sendspawn(clients[i], i == 0);
             }
         }
         betweenrounds = false;

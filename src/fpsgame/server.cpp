@@ -892,8 +892,8 @@ namespace server
     }
 
     // forward declare so visible in servmode
-    int pickplayerspawn(clientinfo *ci, int attr2 = -1);
-    void sendspawn(clientinfo *ci);
+    int pickplayerspawn(clientinfo *ci, int attr2 = -1, bool forcerandom = false);
+    void sendspawn(clientinfo *ci, bool forcerandom = false);
     bool candamagedefault(clientinfo *target, clientinfo *actor, int gun);
 
     struct servmode
@@ -911,7 +911,7 @@ namespace server
             if(victim==actor || isteam(victim->team, actor->team)) return -1;
             return 1;
         }
-        virtual int pickspawn(clientinfo *ci) { return -1; }
+        virtual int pickspawn(clientinfo *ci, bool forcerandom = false) { return pickplayerspawn(ci, -1, forcerandom); }
         virtual void died(clientinfo *victim, clientinfo *actor) {}
         virtual bool canchangeteam(clientinfo *ci, const char *oldteam, const char *newteam) { return true; }
         virtual void changeteam(clientinfo *ci, const char *oldteam, const char *newteam) {}
@@ -1001,7 +1001,7 @@ namespace server
     }
 
     // default spawn selection - pick a spawn that is far from other players, particularly enemies
-    int pickplayerspawn(clientinfo *ci, int attr2)
+    int pickplayerspawn(clientinfo *ci, int attr2, bool forcerandom)
     {
         int best = -1;
         float bestdist = 0.0f;
@@ -1013,6 +1013,7 @@ namespace server
             server_entity &sent = sents[i];
             if(sent.type != PLAYERSTART || (attr2 >= 0 && sent.attr2 != attr2)) continue;
             starts++;
+            if (forcerandom) break;
             bool any = false;
             float close = 1e10f;
             loopvj(clients)
@@ -1020,8 +1021,7 @@ namespace server
                 clientinfo *oi = clients[j];
                 if (oi == ci
                     || (!oi->state.pendingspawn.hasvalue
-                        && (oi->state.lastspawn < 0
-                            || oi->state.state == CS_SPECTATOR
+                        && (oi->state.state == CS_SPECTATOR
                             || oi->state.health <= 0))) continue;
                 float dist = oi->state.pendingspawn.coalesce(oi->state.o).dist(sent.o);
                 if(isteam(ci->team, oi->team)) dist *= 2; // don't worry as much about spawning near teammates
@@ -1037,7 +1037,7 @@ namespace server
         }
         // if we found spawns, but there were no suitable players to
         // compare against, then pick a random spawn
-        if(best < 0 && starts)
+        if((forcerandom || best < 0) && starts)
         {
             int iter = rnd(sents.length());
             do
@@ -1053,8 +1053,11 @@ namespace server
                 }
             } while (best < 0 && iter >= 0);
         }
-        if(best >= 0) ci->state.o = sents[best].o;
-        ci->state.pendingspawn = optional<vec>(bestpos);
+        if(best >= 0)
+        {
+            ci->state.o = sents[best].o;
+            ci->state.pendingspawn = optional<vec>(bestpos);
+        }
         return best;
     }
 
@@ -1893,11 +1896,11 @@ namespace server
         gs.lifesequence = (gs.lifesequence + 1)&0x7F;
     }
 
-    void sendspawn(clientinfo *ci)
+    void sendspawn(clientinfo *ci, bool forcerandom)
     {
         gamestate &gs = ci->state;
         spawnstate(ci);
-        int spawn = smode ? smode->pickspawn(ci) : pickplayerspawn(ci);
+        int spawn = smode ? smode->pickspawn(ci, forcerandom) : pickplayerspawn(ci, forcerandom);
         sendf(ci->ownernum, 1, "ri9vv", N_SPAWNSTATE, ci->clientnum, spawn,
               gs.lifesequence,
               gs.health, gs.maxhealth,

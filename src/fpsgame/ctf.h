@@ -251,10 +251,10 @@ struct ctfclientmode : clientmode
         }
     }
 
-    int pickspawn(clientinfo *ci)
+    int pickspawn(clientinfo *ci, bool forcerandom)
     {
         //FIXME: implement pickholdspawn for server-side
-        return pickplayerspawn(ci, m_hold ? 0 : ctfteamflag(ci->team));
+        return pickplayerspawn(ci, m_hold ? 0 : ctfteamflag(ci->team), forcerandom);
     }
 
     void setup()

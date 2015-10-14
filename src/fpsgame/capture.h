@@ -667,7 +667,7 @@ struct captureclientmode : clientmode
         return rnd(2) ? best : alt;
     }
 
-    void pickspawn(fpsent *d)
+    void pickspawn(fpsent *d, bool forcerandom)
     {
         findplayerspawn(d, pickteamspawn(d->team));
     }
@@ -784,9 +784,9 @@ ICOMMAND(insidebases, "", (),
 
     captureservmode() : captures(0), notgotbases(false) {}
 
-    int pickspawn(clientinfo *ci)
+    int pickspawn(clientinfo *ci, bool forcerandom)
     {
-        return pickplayerspawn(ci);
+        return pickplayerspawn(ci, -1, forcerandom);
     }
 
     void reset(bool empty)
