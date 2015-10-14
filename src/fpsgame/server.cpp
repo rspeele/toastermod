@@ -2185,7 +2185,7 @@ namespace server
     void restartgamein(const int seconds)
     {
         const int future = seconds * 1000;
-        sendbroadcast("restarting game in %ds", future);
+        sendbroadcast("restarting game in %d", future);
         serverevents::add(&restartgame, future);
     }
 

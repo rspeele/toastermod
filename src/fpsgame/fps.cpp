@@ -350,7 +350,7 @@ namespace game
         static const char *nothing = "";
         static string buffer;
         if(lastmillis >= broadcastexpire) return nothing;
-        formatstring(buffer, broadcastmsg, (broadcastexpire - lastmillis) / 1000);
+        formatstring(buffer, broadcastmsg, (broadcastexpire - lastmillis + 900) / 1000); // the +900 ensures that 0 seconds will show for 100ms
         return buffer;
     }
 

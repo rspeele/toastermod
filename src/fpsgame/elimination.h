@@ -2,6 +2,8 @@
 #ifdef SERVMODE
 bool betweenrounds = false;
 bool livefire = false;
+const int postroundmillis = 5000;
+const int preroundmillis = 5000;
 struct elimservmode : servmode
 #else
 struct elimclientmode : clientmode
@@ -89,8 +91,8 @@ struct elimclientmode : clientmode
         }
         betweenrounds = false;
         livefire = false;
-        serverevents::add(&startlivefire, 5000);
-        sendbroadcastf("round starting in %ds", 5000, 5);
+        serverevents::add(&startlivefire, preroundmillis);
+        sendbroadcast("round starting in %d", preroundmillis);
     }
     static void startlivefire()
     {
@@ -164,8 +166,8 @@ struct elimclientmode : clientmode
         if(won.over)
         {
             endround(won.winner);
-            sendbroadcastf("round: %s", 5000, won.winner ? won.winner : "draw");
-            serverevents::add(&startround, 5000);
+            sendbroadcastf("round: %s", postroundmillis, won.winner ? won.winner : "draw");
+            serverevents::add(&startround, postroundmillis);
         }
     }
 #else
