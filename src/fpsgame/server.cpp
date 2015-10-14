@@ -2402,7 +2402,8 @@ namespace server
     bool candamagedefault(clientinfo *target, clientinfo *actor, int gun)
     {
         return
-            teamdamage == 1
+            target == actor
+            || teamdamage == 1
             || (teamdamage == 2 && (gun == GUN_RL || gun == GUN_GL))
             || !isteam(actor->team, target->team);
     }

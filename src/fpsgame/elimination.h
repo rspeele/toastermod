@@ -1,6 +1,7 @@
 #ifndef PARSEMESSAGES
 #ifdef SERVMODE
 bool betweenrounds = false;
+bool livefire = false;
 struct elimservmode : servmode
 #else
 struct elimclientmode : clientmode
@@ -64,6 +65,10 @@ struct elimclientmode : clientmode
     {
         return pickplayerspawn(ci);
     }
+    bool candamage(clientinfo *target, clientinfo *actor, int gun)
+    {
+        return target == actor || (livefire && servmode::candamage(target, actor, gun));
+    }
     void endround(const char *winner)
     {
         if(!winner) return;
@@ -83,6 +88,13 @@ struct elimclientmode : clientmode
             }
         }
         betweenrounds = false;
+        livefire = false;
+        serverevents::add(&startlivefire, 5000);
+        sendbroadcastf("round starting in %ds", 5000, 5);
+    }
+    static void startlivefire()
+    {
+        livefire = true;
     }
     bool checkround;
     struct winstate
