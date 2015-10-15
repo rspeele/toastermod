@@ -67,6 +67,10 @@ struct elimclientmode : clientmode
     {
         return target == actor || (livefire && servmode::candamage(target, actor, gun));
     }
+    bool isintermission()
+    {
+        return betweenrounds && servmode::isintermission();
+    }
     void endround(const char *winner)
     {
         if(!winner) return;

@@ -920,6 +920,7 @@ namespace server
         virtual void cleanup() {}
         virtual void setup() {}
         virtual void newmap() {}
+        virtual bool isintermission() { return m_timed && gamemillis >= gamelimit; };
         virtual void intermission() {}
         virtual bool hidefrags() { return false; }
         virtual int getteamscore(const char *team) { return 0; }
@@ -939,6 +940,11 @@ namespace server
     collectservmode collectmode;
     elimservmode eliminationmode;
     servmode *smode = NULL;
+
+    bool isintermission()
+    {
+        return smode ? smode->isintermission() : (m_timed && gamemillis >= gamelimit);
+    }
 
     bool wantentity(int type)
     {
@@ -1955,7 +1961,7 @@ namespace server
     bool hasmap(clientinfo *ci)
     {
         return (m_edit && (clients.length() > 0 || ci->local)) ||
-               (smapname[0] && (!m_timed || gamemillis < gamelimit || (ci->state.state==CS_SPECTATOR && !ci->privilege && !ci->local) || numclients(ci->clientnum, true, true, true)));
+               (smapname[0] && (!isintermission() || (ci->state.state==CS_SPECTATOR && !ci->privilege && !ci->local) || numclients(ci->clientnum, true, true, true)));
     }
 
     int welcomepacket(packetbuf &p, clientinfo *ci)
@@ -2204,7 +2210,7 @@ namespace server
 
         gamemode = mode;
         gamemillis = 0;
-        gamelimit = (m_overtime ? 15 : 10)*60000;
+        gamelimit = (m_overtime ? 15 : 2/*10*/)*60000; // NOCOMMIT
         interm = 0;
         nextexceeded = 0;
         copystring(smapname, s);
@@ -2391,7 +2397,7 @@ namespace server
 
     void checkintermission()
     {
-        if(gamemillis >= gamelimit && !interm)
+        if(isintermission() && !interm)
         {
             sendf(-1, 1, "ri2", N_TIMEUP, 0);
             if(smode) smode->intermission();
@@ -2678,7 +2684,7 @@ namespace server
             gamemillis += curtime;
 
             if(m_demo) readdemo();
-            else if(!m_timed || gamemillis < gamelimit)
+            else if(!isintermission())
             {
                 processevents();
                 if(curtime)
@@ -2707,7 +2713,7 @@ namespace server
         while(bannedips.length() && bannedips[0].expire-totalmillis <= 0) bannedips.remove(0);
         loopv(connects) if(totalmillis-connects[i]->connectmillis>15000) disconnect_client(connects[i]->clientnum, DISC_TIMEOUT);
 
-        if(nextexceeded && gamemillis > nextexceeded && (!m_timed || gamemillis < gamelimit))
+        if(nextexceeded && gamemillis > nextexceeded && !isintermission())
         {
             nextexceeded = 0;
             loopvrev(clients) 
