@@ -1050,7 +1050,7 @@ namespace server
             {
                 loopv(sents)
                 {
-                    if(sents[i].type == PLAYERSTART && (attr2 < 0 || sents[i].attr2 == attr2) && iter-- < 0)
+                    if(sents[i].type == PLAYERSTART && (attr2 < 0 || sents[i].attr2 == attr2) && --iter < 0)
                     {
                         best = i;
                         bestpos = sents[i].o;
