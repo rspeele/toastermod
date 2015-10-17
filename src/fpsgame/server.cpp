@@ -1046,18 +1046,22 @@ namespace server
         if((forcerandom || best < 0) && starts)
         {
             int iter = rnd(sents.length());
+            bool any = false;
             do
             {
                 loopv(sents)
                 {
-                    if(sents[i].type == PLAYERSTART && (attr2 < 0 || sents[i].attr2 == attr2) && --iter < 0)
+                    if(sents[i].type == PLAYERSTART
+                       && (attr2 < 0 || sents[i].attr2 == attr2)
+                       && (any = true)
+                       && --iter < 0)
                     {
                         best = i;
                         bestpos = sents[i].o;
                         break;
                     }
                 }
-            } while (best < 0 && iter >= 0);
+            } while (any && best < 0 && iter >= 0);
         }
         if(best >= 0)
         {
