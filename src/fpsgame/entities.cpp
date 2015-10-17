@@ -2,6 +2,12 @@
 
 namespace entities
 {
+    enum
+    {
+        TELEFLAG_PRESERVESPEED = 1<<0, // incoming speed is kept on exit
+        TELEFLAG_REQUIRETEAM   = 1<<1  // needs teammate near exit to work
+    };
+
     using namespace game;
 
     int extraentinfosize() { return 0; }       // size in bytes of what the 2 methods below read/write... so it can be skipped by other games
@@ -261,10 +267,24 @@ namespace entities
             if(beenhere<0) beenhere = e;
             if(ents[e]->attr2==tag)
             {
+                if(m_teammode && (ents[e]->attr3 & TELEFLAG_REQUIRETEAM))
+                {
+                    bool teammateclose = false;
+                    loopv(players)
+                    {
+                        fpsent *other = players[i];
+                        if (other->o.dist(ents[e]->o) < 100.0f && isteam(other->team, d->team))
+                        {
+                            teammateclose = true;
+                            break;
+                        }
+                    }
+                    if (!teammateclose) return;
+                }
                 teleporteffects(d, n, e, true);
                 d->o = ents[e]->o;
                 d->yaw = ents[e]->attr1;
-                if(ents[e]->attr3 > 0)
+                if(ents[e]->attr3 & TELEFLAG_PRESERVESPEED)
                 {
                     vec dir;
                     vecfromyawpitch(d->yaw, 0, 1, 0, dir);
