@@ -681,16 +681,6 @@ template <class T> struct vector
         buf = (T *)newbuf;
     }
 
-    void growlength(int sz)
-    {
-        growbuf(sz);
-        if (ulen < sz)
-        {
-            memset((void *)(buf + ulen), 0, (sz - ulen) * sizeof(T));
-            ulen = sz;
-        }
-    }
-
     databuf<T> reserve(int sz)
     {
         if(alen-ulen < sz) growbuf(ulen+sz);
@@ -1182,40 +1172,6 @@ template <class T> struct optional
     {
         return hasvalue ? *this : other;
     }
-};
-
-struct statetracker
-{
-    virtual void reset() { }
-    virtual ~statetracker() { }
-};
-
-class multistatetracker : statetracker
-{
-    static int nexttypeindex;
-    hashtable<int, statetracker *> states;
-
-    template <class T> static int typeindex()
-    {
-        static int counter = nexttypeindex++; // each <T> gets a new type index
-        return counter;
-    }
-public:
-    multistatetracker();
-    virtual ~multistatetracker();
-    template <class T> T& tracker()
-    {
-        int index = typeindex<T>();
-        statetracker *tr = states.find(index, NULL);
-        if (!tr)
-        {
-            tr = new T();
-            tr->reset();
-            states[index] = tr;
-        }
-        return *(T *)tr;
-    }
-    virtual void reset();
 };
 
 const int islittleendian = 1;

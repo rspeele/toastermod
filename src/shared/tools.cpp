@@ -245,31 +245,3 @@ int ipmask::print(char *buf) const
     return int(buf-start);
 }
 
-int multistatetracker::nexttypeindex = 0;
-
-multistatetracker::multistatetracker() : states()
-{
-}
-
-multistatetracker::~multistatetracker()
-{
-    enumerate
-        (states, statetracker *, tr,
-         {
-             if (tr)
-             {
-                 delete tr;
-                 tr = NULL;
-             }
-         });
-}
-
-
-void multistatetracker::reset()
-{
-    enumerate
-        (states, statetracker *, tr,
-         {
-             if (tr) tr->reset();
-         });
-}

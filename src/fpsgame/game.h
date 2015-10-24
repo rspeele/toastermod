@@ -716,18 +716,8 @@ struct fpsstate
     }
 };
 
-struct gunstate : statetracker
-{
-    int attackcharge;
-    int lastreload;
-    virtual void reset()
-    {
-        attackcharge = 0;
-        lastreload = 0;
-    }
-};
 
-struct fpsent : dynent, fpsstate, multistatetracker
+struct fpsent : dynent, fpsstate
 {
     int weight;                         // affects the effectiveness of hitpush
     int clientnum, privilege, lastupdate, plag, ping;
@@ -735,9 +725,9 @@ struct fpsent : dynent, fpsstate, multistatetracker
     int respawned, suicided;
     int lastpain;
     int lastyelp;
-
+    int lastreload;
     int lastaction, lastattackgun;
-
+    int attackcharge;
     bool attacking;
     int attacksound, attackchan, idlesound, idlechan;
     int lasttaunt;
@@ -794,10 +784,10 @@ struct fpsent : dynent, fpsstate, multistatetracker
         dynent::reset();
         fpsstate::respawn();
         respawned = suicided = -1;
-
+        lastreload = 0;
         lastaction = 0;
         lastattackgun = gunselect;
-
+        attackcharge = 0;
         attacking = false;
         lasttaunt = 0;
         lastpickup = -1;
