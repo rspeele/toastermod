@@ -519,7 +519,7 @@ namespace server
 }
 
 // inherited by fpsent and server clients
-struct fpsstate : multistatetracker
+struct fpsstate
 {
     int health, maxhealth;
     int armour, armourtype;
@@ -727,7 +727,7 @@ struct gunstate : statetracker
     }
 };
 
-struct fpsent : dynent, fpsstate
+struct fpsent : dynent, fpsstate, multistatetracker
 {
     int weight;                         // affects the effectiveness of hitpush
     int clientnum, privilege, lastupdate, plag, ping;
