@@ -290,11 +290,13 @@ namespace game
         sway.z = swayup*(fabs(sinf(steps)) - 1);
         sway.add(swaydir).add(d->o);
         if(!hudgunsway) sway = d->o;
-        if(guns[d->gunselect].charge && d->attackcharge) // move hudgun back when charging
+        if(guns[d->gunselect].charge && d->tracker<gunstate>().attackcharge) // move hudgun back when charging
         {
             vec chargeoffset;
             vecfromyawpitch(d->yaw, d->pitch, -1, 0, chargeoffset);
-            const float charge = (float)(lastmillis - d->attackcharge) / (float)guns[d->gunselect].charge;
+            const float charge =
+                (float)(lastmillis - d->tracker<gunstate>().attackcharge)
+                / (float)guns[d->gunselect].charge;
             chargeoffset.mul(charge * 0.8f);
             sway.add(chargeoffset);
         }

@@ -23,7 +23,7 @@ namespace game
     void reload(int gun, fpsent *d)
     {
         d->reload(gun);
-        d->lastreload = lastmillis;
+        d->tracker<gunstate>().lastreload = lastmillis;
         addmsg(N_RELOAD, "rci", d, gun);
     }
 
@@ -33,8 +33,8 @@ namespace game
         {
             addmsg(N_GUNSELECT, "rci", d, gun);
             playsound(S_WEAPLOAD, &d->o);
-            d->attackcharge = 0; // forget charge
-            d->lastreload = lastmillis;
+            d->tracker<gunstate>().attackcharge = 0; // forget charge
+            d->tracker<gunstate>().lastreload = lastmillis;
         }
         d->gunselect = gun;
     }
@@ -822,14 +822,15 @@ namespace game
     {
         if(d==player1 || d->ai)
         {
+            gunstate &gun = d->tracker<gunstate>();
             if(d->attacking)
             {
-                if(!d->attackcharge) d->attackcharge = lastmillis;
-                return lastmillis - d->attackcharge >= guns[d->gunselect].charge;
+                if(!gun.attackcharge) gun.attackcharge = lastmillis;
+                return lastmillis - gun.attackcharge >= guns[d->gunselect].charge;
             }
             else
             {
-                return d->attackcharge;
+                return gun.attackcharge;
             }
         }
         return true;
@@ -841,7 +842,7 @@ namespace game
         if(capacity <= 0) return d->ammo[gun] > 0;
         if(d->magazine[gun] < capacity)
         {
-            const int reloadtime = lastmillis - max(d->lastaction, d->lastreload);
+            const int reloadtime = lastmillis - max(d->lastaction, d->tracker<gunstate>().lastreload);
             if(d->ammo[gun] && reloadtime >= guns[gun].reloaddelay) reload(gun, d);
         }
         return d->magazine[d->gunselect] > 0;
@@ -850,6 +851,7 @@ namespace game
     {
         const int prevaction = d->lastaction;
         const bool isloaded = checkreload(d);
+        gunstate &gun = d->tracker<gunstate>();
         if(!checkgunwait(d)) return;
         if(!isloaded)
         {
@@ -864,8 +866,8 @@ namespace game
             return;
         }
         if(!checkcharge(d)) return;
-        const int charge = d->attackcharge ? lastmillis - d->attackcharge : 0;
-        d->attackcharge = 0;
+        const int charge = gun.attackcharge ? lastmillis - gun.attackcharge : 0;
+        gun.attackcharge = 0;
         d->lastaction = lastmillis;
         d->lastattackgun = d->gunselect;
         if(d->gunselect) d->ammosource(d->gunselect)--;
