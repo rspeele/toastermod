@@ -2542,8 +2542,11 @@ namespace server
            !gs.ammosource(gun) || (guns[gun].range && from.dist(to) > guns[gun].range + 1))
             return;
         if(gun!=GUN_FIST) gs.ammosource(gun)--;
-        gs.lastshot = millis;
-        gs.gunwait = guns[gun].attackdelay;
+        if (!guns[gun].continuous || hits.length())
+        {
+            gs.lastshot = millis;
+            gs.gunwait = guns[gun].attackdelay;
+        }
         sendf(-1, 1, "ri2i9x", N_SHOTFX, ci->clientnum, gun, charge, id,
                 int(from.x*DMF), int(from.y*DMF), int(from.z*DMF),
                 int(to.x*DMF), int(to.y*DMF), int(to.z*DMF),

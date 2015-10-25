@@ -820,19 +820,16 @@ namespace game
     }
     const bool checkcharge(fpsent *d)
     {
-        if(d==player1 || d->ai)
+        if(d!=player1 && !d->ai) return true;
+        if(d->attacking)
         {
-            if(d->attacking)
-            {
-                if(!d->attackcharge) d->attackcharge = lastmillis;
-                return lastmillis - d->attackcharge >= guns[d->gunselect].charge;
-            }
-            else
-            {
-                return d->attackcharge;
-            }
+            if(!d->attackcharge) d->attackcharge = lastmillis;
+            return lastmillis - d->attackcharge >= guns[d->gunselect].charge;
         }
-        return true;
+        else
+        {
+            return d->attackcharge;
+        }
     }
     const bool checkreload(fpsent * d)
     {
@@ -866,7 +863,6 @@ namespace game
         if(!checkcharge(d)) return;
         const int charge = d->attackcharge ? lastmillis - d->attackcharge : 0;
         d->attackcharge = 0;
-        d->lastaction = lastmillis;
         d->lastattackgun = d->gunselect;
         if(d->gunselect) d->ammosource(d->gunselect)--;
         vec from = d->o;
@@ -895,7 +891,10 @@ namespace game
 
         shoteffects(d->gunselect, from, to, d, true, 0, prevaction, charge);
 
-        if(d==player1 || d->ai)
+        const bool delaysnextshot = !guns[d->gunselect].continuous || hits.length();
+        const bool elapsedinterval = delaysnextshot || lastmillis - d->lastaction >= guns[d->gunselect].attackdelay;
+
+        if((d==player1 || d->ai) && elapsedinterval)
         {
             addmsg(N_SHOOT, "rci3i6iv", d, lastmillis-maptime, d->gunselect, charge,
                    (int)(from.x*DMF), (int)(from.y*DMF), (int)(from.z*DMF),
@@ -903,7 +902,14 @@ namespace game
                    hits.length(), hits.length()*sizeof(hitmsg)/sizeof(int), hits.getbuf());
         }
 
-		d->gunwait = guns[d->gunselect].attackdelay;
+        if (elapsedinterval)
+        {
+            d->lastaction = lastmillis;
+        }
+        if (delaysnextshot)
+        {
+            d->gunwait = guns[d->gunselect].attackdelay;
+        }
 		if(d->gunselect == GUN_PISTOL && d->ai) d->gunwait += int(d->gunwait*(((101-d->skill)+rnd(111-d->skill))/100.f));
         d->totalshots += guns[d->gunselect].damage*(d->quad.millis ? 4 : 1)*guns[d->gunselect].rays;
     }

@@ -365,22 +365,24 @@ struct guninfo
     int hitpush;
     int exprad, ttl;
     int capacity, reload, reloaddelay;
+    bool continuous;
     const char *name, *file;
 guninfo() : sound(-1), charge(0), bonus(0), spread(0),
         projspeed(0), kickamount(0), range(1024),
         rays(1), hitpush(80), exprad(0), ttl(0),
-        capacity(0), reload(0), reloaddelay(0) {}
+        capacity(0), reload(0), reloaddelay(0), continuous(false) {}
 };
-struct punchinfo : guninfo
+struct chainsawinfo : guninfo
 {
-    punchinfo()
+    chainsawinfo()
     {
         sound = S_PUNCH1;
         attackdelay = 250;
         damage = 50;
         range = 14;
-        name = "fist";
+        name = "chainsaw";
         file = "fist";
+        continuous = true;
     }
 };
 struct sginfo : guninfo
@@ -464,15 +466,13 @@ struct pistolinfo : guninfo
 };
 static const guninfo guns[NUMGUNS] =
 {
-    punchinfo(),
+    chainsawinfo(),
     sginfo(),
     cginfo(),
     rlinfo(),
     rifleinfo(),
     glinfo(),
     pistolinfo()
-    // fireball, iceball, barrel and such are undefined for now
-    // consider SP broken anyway...
 };
 
 #include "ai.h"
