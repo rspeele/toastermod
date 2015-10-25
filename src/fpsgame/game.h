@@ -392,7 +392,7 @@ struct sginfo : guninfo
         sound = S_SG;
         attackdelay = 800;
         damage = 4;
-        spread = 100;
+        spread = 90;
         rays = 25;
         name = "shotgun";
         file = "shotg";
