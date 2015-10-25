@@ -776,7 +776,6 @@ namespace game
     void raydamage(vec &from, vec &to, fpsent *d)
     {
         int qdam = guns[d->gunselect].damage;
-        if(d->quad.millis) qdam *= 4;
         dynent *o;
         float dist;
         if(guns[d->gunselect].rays > 1)
@@ -798,7 +797,7 @@ namespace game
                     hits[j] = NULL;
                     numhits++;
                 }
-                hitpush(numhits*qdam, o, d, from, to, d->gunselect, numhits);
+                hitpush(numhits*qdam*(d->quad.millis ? 4 : 1), o, d, from, to, d->gunselect, numhits);
             }
         }
         else if((o = intersectclosest(from, to, d, dist)))
@@ -809,6 +808,10 @@ namespace game
             if (guns[d->gunselect].streakbase != 1.0f)
             {
                 qdam *= powf(guns[d->gunselect].streakbase, d->streak.streak(lastmillis));
+            }
+            if (d->quad.millis)
+            {
+                qdam *= 4;
             }
             shorten(from, to, dist);
             hitpush(qdam, o, d, from, to, d->gunselect, 1, headshot);
