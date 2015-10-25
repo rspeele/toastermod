@@ -366,23 +366,30 @@ struct guninfo
     int exprad, ttl;
     int capacity, reload, reloaddelay;
     bool continuous;
+    float streakbase;
+    int streakdelay;
     const char *name, *file;
-guninfo() : sound(-1), charge(0), bonus(0), spread(0),
-        projspeed(0), kickamount(0), range(1024),
-        rays(1), hitpush(80), exprad(0), ttl(0),
-        capacity(0), reload(0), reloaddelay(0), continuous(false) {}
+    guninfo()
+        : sound(-1), charge(0), bonus(0), spread(0),
+          projspeed(0), kickamount(0), range(1024),
+          rays(1), hitpush(80), exprad(0), ttl(0),
+          capacity(0), reload(0), reloaddelay(0),
+          continuous(false),
+          streakbase(1.0f), streakdelay(0) {}
 };
 struct chainsawinfo : guninfo
 {
     chainsawinfo()
     {
         sound = S_PUNCH1;
-        attackdelay = 250;
-        damage = 50;
-        range = 14;
+        attackdelay = 100;
+        damage = 20;
+        range = 25;
+        continuous = true;
+        streakbase = 1.5f;
+        streakdelay = 200;
         name = "chainsaw";
         file = "fist";
-        continuous = true;
     }
 };
 struct sginfo : guninfo
@@ -406,6 +413,8 @@ struct cginfo : guninfo
         attackdelay = 75;
         damage = 10;
         spread = 20;
+        streakbase = 1.2f;
+        streakdelay = 125;
         name = "chaingun";
         file = "chaing";
     }
@@ -518,6 +527,40 @@ namespace server
     };
 }
 
+class hitstreak
+{
+    int gun, hits, lasthit;
+public:
+
+    void clear()
+    {
+        gun = hits = 0;
+    }
+
+    int streak(int millis)
+    {
+        if (millis - lasthit <= guns[gun].streakdelay)
+        {
+            return hits;
+        }
+        return 0;
+    }
+
+    void addshot(int millis, int gunused, bool hit)
+    {
+        if (gunused != gun)
+        {
+            clear();
+            gun = gunused;
+        }
+        if (hit)
+        {
+            hits = streak(millis) + 1;
+            lasthit = millis;
+        }
+    }
+};
+
 // inherited by fpsent and server clients
 struct fpsstate
 {
@@ -526,11 +569,12 @@ struct fpsstate
     int gunselect, gunwait;
     int ammo[NUMGUNS], magazine[NUMGUNS];
     int aitype, skill;
+    hitstreak streak;
 
     server::quadstate quad;
     server::booststate boost;
 
-    fpsstate() : maxhealth(100), aitype(AI_NONE), skill(0) {}
+    fpsstate() : maxhealth(100), aitype(AI_NONE), skill(0), streak() {}
 
     void updatepowerup(int curtime)
     {
@@ -622,6 +666,7 @@ struct fpsstate
         loopi(NUMGUNS) ammo[i] = 0;
         loopi(NUMGUNS) magazine[i] = 0;
         ammo[GUN_FIST] = 1;
+        streak.clear();
     }
 
     void spawnstate(int gamemode)

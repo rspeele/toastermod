@@ -806,6 +806,10 @@ namespace game
             if(d->gunselect == GUN_CG) qdam = server::cgdamage(d->o.dist(o->o)) * (d->quad.millis ? 4 : 1);
             const bool headshot = guns[d->gunselect].bonus && isheadshot(o, from, to, dist);
             if(headshot) qdam += guns[d->gunselect].bonus;
+            if (guns[d->gunselect].streakbase != 1.0f)
+            {
+                qdam *= powf(guns[d->gunselect].streakbase, d->streak.streak(lastmillis));
+            }
             shorten(from, to, dist);
             hitpush(qdam, o, d, from, to, d->gunselect, 1, headshot);
         }
@@ -890,6 +894,8 @@ namespace game
         if(!guns[d->gunselect].projspeed) raydamage(from, to, d);
 
         shoteffects(d->gunselect, from, to, d, true, 0, prevaction, charge);
+
+        d->streak.addshot(lastmillis, d->gunselect, hits.length() > 0);
 
         const bool delaysnextshot = !guns[d->gunselect].continuous || hits.length();
         const bool elapsedinterval = delaysnextshot || lastmillis - d->lastaction >= guns[d->gunselect].attackdelay;

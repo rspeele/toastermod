@@ -2421,11 +2421,11 @@ namespace server
             || !isteam(actor->team, target->team);
     }
 
-    void dodamage(clientinfo *target, clientinfo *actor, int damage, int gun, const vec &hitpush = vec(0, 0, 0))
+    bool dodamage(clientinfo *target, clientinfo *actor, int damage, int gun, const vec &hitpush = vec(0, 0, 0))
     {
         if (!(smode ? smode->candamage(target, actor, gun) : candamagedefault(target, actor, gun)))
         {
-            return; // no effect
+            return false; // no effect
         }
         gamestate &ts = target->state;
         ts.dodamage(damage);
@@ -2466,6 +2466,7 @@ namespace server
             // don't issue respawn yet until DEATHMILLIS has elapsed
             // ts.respawn();
         }
+        return true;
     }
 
     void suicide(clientinfo *ci)
@@ -2552,6 +2553,7 @@ namespace server
                 int(to.x*DMF), int(to.y*DMF), int(to.z*DMF),
                 ci->ownernum);
         gs.shotdamage += guns[gun].damage*(gs.quad.millis ? 4 : 1)*guns[gun].rays;
+        bool diddamage = false;
         switch(gun)
         {
             case GUN_RL: gs.rockets.add(id); break;
@@ -2569,12 +2571,17 @@ namespace server
                     if(totalrays>maxrays) continue;
                     int damage = gun == GUN_CG ? cgdamage(target->state.o.dist(gs.o)) : h.rays*guns[gun].damage;
                     if(h.headshot) damage += guns[gun].bonus;
+                    if(guns[gun].streakbase != 1.0f)
+                    {
+                        damage *= powf(guns[gun].streakbase, gs.streak.streak(millis));
+                    }
                     if(gs.quad.millis) damage *= 4;
-                    dodamage(target, ci, damage, gun, h.dir);
+                    diddamage |= dodamage(target, ci, damage, gun, h.dir);
                 }
                 break;
             }
         }
+        gs.streak.addshot(millis, gun, diddamage);
     }
 
     const int cgdamage(const float dist) // how much damage the CG should do at a given range
