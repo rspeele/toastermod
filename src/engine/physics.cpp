@@ -1675,7 +1675,7 @@ namespace movement
 // applying velocity changes
     void accelfric(physent *pl, vec &wishdir, bool floating, int curtime)
     {
-        const float stopspeed = 1.0f;
+        const float stopspeed = 1e-3f;
         const float fricspeed = 25.0f;
         const moveattrs &m = statewise(pl, floating);
         if(m.friction > 0)
