@@ -1873,7 +1873,7 @@ void physicsframe()          // optimally schedule physics frames inside the gra
 }
 
 VAR(physinterp, 0, 1, 1);
-VAR(phystrails, 0, 0, 15);
+VAR(phystrailtime, 0, 15, 60);
 
 void interppos(physent *pl)
 {
@@ -1904,13 +1904,14 @@ void showphystrails(physent *pl, vec &prevpos)
             int trailcolor = strafecolor | movecolor;
             if (!trailcolor) trailcolor = 0xFFFFFF;
 
-            particle_flare
-                (vec(pl->lasttrail.value.o).subz(pl->eyeheight)
-                 , vec(pl->o).subz(pl->eyeheight)
-                 , 1000 * phystrails
-                 , PART_STREAK
-                 , trailcolor
-                 , 0.25f);
+            if (pl->phystrails)
+                particle_flare
+                    (vec(pl->lasttrail.value.o).subz(pl->eyeheight)
+                     , vec(pl->o).subz(pl->eyeheight)
+                     , 1000 * phystrailtime
+                     , PART_STREAK
+                     , trailcolor
+                     , 0.25f);
             pl->lasttrail = optional<phystrail>(phystrail(pl->o, lastmillis));
         }
     }
@@ -1941,7 +1942,7 @@ void moveplayer(physent *pl, int moveres, bool local)
         interppos(pl);
     }
 
-    if(phystrails) showphystrails(pl, prevpos);
+    if(phystrailtime) showphystrails(pl, prevpos);
 }
 
 bool bounce(physent *d, float elasticity, float waterfric, float grav, physent *safe, bool players)
@@ -2169,6 +2170,8 @@ dir(right,    strafe, -1, k_right, k_left);
 
 ICOMMAND(jump,   "D", (int *down), { if(!*down || game::canjump()) player->jumping = *down ? JUMP_PENDING : JUMP_NONE; });
 ICOMMAND(attack, "D", (int *down), { game::doattack(*down!=0); });
+
+VARF(phystrail, 0, 0, 1, { player->phystrails = phystrail; });
 
 bool entinmap(dynent *d, bool avoidplayers)        // brute force but effective way to find a free spawn spot in the map
 {

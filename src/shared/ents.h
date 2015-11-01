@@ -95,6 +95,7 @@ struct physent                                  // base entity type, can be affe
 
     bool blocked;                               // used by physics to signal ai
 
+    char phystrails;                            // true if this entity wants to leave trails
     optional<phystrail> lasttrail;
 
     physent() : o(0, 0, 0), deltapos(0, 0, 0), newpos(0, 0, 0), yaw(0), pitch(0), roll(0), maxspeed(90), 
@@ -102,7 +103,7 @@ struct physent                                  // base entity type, can be affe
                state(CS_ALIVE), editstate(CS_ALIVE), type(ENT_PLAYER),
                collidetype(COLLIDE_ELLIPSE),
                blocked(false),
-               lasttrail()
+               phystrails(false), lasttrail()
                { reset(); }
               
     void resetinterp()
