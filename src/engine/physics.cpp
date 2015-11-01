@@ -1873,6 +1873,7 @@ void physicsframe()          // optimally schedule physics frames inside the gra
 }
 
 VAR(physinterp, 0, 1, 1);
+VAR(phystrails, 0, 0, 15);
 
 void interppos(physent *pl)
 {
@@ -1886,8 +1887,43 @@ void interppos(physent *pl)
     pl->o.add(deltapos);
 }
 
+void showphystrails(physent *pl, vec &prevpos)
+{
+    if(pl->lasttrail.hasvalue)
+    {
+        if(lastmillis - pl->lasttrail.value.millis > 25)
+        {
+            int strafecolor =
+                pl->strafe > 0 ? 0xFF0000
+                : pl->strafe < 0 ? 0x0000FF
+                : 0x000000;
+            int movecolor =
+                pl->move > 0 ? 0x00FF00
+                : pl->move < 0 ? 0x007F00
+                : 0x000000;
+            int trailcolor = strafecolor | movecolor;
+            if (!trailcolor) trailcolor = 0xFFFFFF;
+
+            particle_flare
+                (vec(pl->lasttrail.value.o).subz(pl->eyeheight)
+                 , vec(pl->o).subz(pl->eyeheight)
+                 , 1000 * phystrails
+                 , PART_STREAK
+                 , trailcolor
+                 , 0.25f);
+            pl->lasttrail = optional<phystrail>(phystrail(pl->o, lastmillis));
+        }
+    }
+    else
+    {
+        pl->lasttrail = optional<phystrail>(phystrail(pl->o, lastmillis));
+    }
+}
+
 void moveplayer(physent *pl, int moveres, bool local)
 {
+    vec prevpos(pl->o);
+
     if(physsteps <= 0)
     {
         if(local) interppos(pl);
@@ -1904,6 +1940,8 @@ void moveplayer(physent *pl, int moveres, bool local)
         pl->deltapos.sub(pl->newpos);
         interppos(pl);
     }
+
+    if(phystrails) showphystrails(pl, prevpos);
 }
 
 bool bounce(physent *d, float elasticity, float waterfric, float grav, physent *safe, bool players)

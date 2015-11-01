@@ -61,6 +61,16 @@ enum { COLLIDE_NONE = 0, COLLIDE_ELLIPSE, COLLIDE_OBB, COLLIDE_ELLIPSE_PRECISE }
 
 enum { JUMP_NONE = 0, JUMP_PENDING, JUMP_JUMPED };
 
+struct phystrail
+{
+    vec o;
+    int millis;
+    phystrail() : o(0,0,0), millis(0) {}
+    phystrail(vec at, int time) : o(at), millis(time)
+    {
+    }
+};
+
 struct physent                                  // base entity type, can be affected by physics
 {
     vec o, vel;                                 // origin, velocity
@@ -85,11 +95,14 @@ struct physent                                  // base entity type, can be affe
 
     bool blocked;                               // used by physics to signal ai
 
+    optional<phystrail> lasttrail;
+
     physent() : o(0, 0, 0), deltapos(0, 0, 0), newpos(0, 0, 0), yaw(0), pitch(0), roll(0), maxspeed(90), 
                radius(4.1f), eyeheight(14), aboveeye(1), xradius(4.1f), yradius(4.1f), zmargin(0),
                state(CS_ALIVE), editstate(CS_ALIVE), type(ENT_PLAYER),
                collidetype(COLLIDE_ELLIPSE),
-               blocked(false)
+               blocked(false),
+               lasttrail()
                { reset(); }
               
     void resetinterp()
@@ -107,6 +120,7 @@ struct physent                                  // base entity type, can be affe
         physstate = PHYS_FALL;
         vel = vec(0, 0, 0);
         floor = vec(0, 0, 1);
+        lasttrail = optional<phystrail>();
     }
 
     vec feetpos(float offset = 0) const { return vec(o).add(vec(0, 0, offset - eyeheight)); }
