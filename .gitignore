@@ -7,3 +7,7 @@ mingw.res
 /bin_unix
 /packages
 /.svn
+/toastermod_bin
+/toastermod_bin64
+/log.txt
+/todo.txt
