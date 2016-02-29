@@ -2017,7 +2017,7 @@ bool lightmapworker::setupthread()
 {
     if(!spacecond) spacecond = SDL_CreateCond();
     if(!spacecond) return false;
-    thread = SDL_CreateThread(work, this);
+    thread = SDL_CreateThread(work, "lightmap worker", this);
     return thread!=NULL;
 }
 

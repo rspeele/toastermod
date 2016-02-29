@@ -115,7 +115,7 @@ namespace rawinput
             if(!g3d_movecursor(ev.dx, ev.dy)) mousemove(ev.dx, ev.dy);
             break;
         case REV_BUTTON:
-            keypress(ev.button, ev.state, 0);
+            processkey(ev.button, ev.state);
             break;
         }
     }
@@ -341,9 +341,9 @@ namespace rawinput
     {
         SDL_SysWMinfo info;
         SDL_VERSION(&info.version);
-        if (SDL_GetWMInfo(&info))
+        if (SDL_GetWindowWMInfo(screen, &info))
         {
-            return info.window;
+            return info.info.win.window;
         }
         else
         {

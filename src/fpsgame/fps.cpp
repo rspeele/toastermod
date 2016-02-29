@@ -821,6 +821,12 @@ namespace game
         if(identexists("mapstart")) execute("mapstart");
     }
     COMMAND(startgame, "");
+
+    void loadingmap(const char *name)
+    {
+        if(identexists("playsong")) execute("playsong");
+    }
+
     void startmap(const char *name)   // called just after a map load
     {
         ai::savewaypoints();
@@ -1314,6 +1320,8 @@ namespace game
 
     void loadconfigs()
     {
+        if(identexists("playsong")) execute("playsong");
+
         execfile("auth.cfg", false);
     }
 }
