@@ -924,7 +924,11 @@ namespace game
         putint(q, N_POS);
         putuint(q, d->clientnum);
         // 3 bits phys state, 1 bit life sequence, 2 bits move, 2 bits strafe
-        uchar physstate = d->physstate | ((d->lifesequence&1)<<3) | ((d->move&3)<<4) | ((d->strafe&3)<<6);
+        uchar physstate
+            = d->physstate
+            | ((d->lifesequence&1)<<3)
+            | ((d->fmove < 0.0f ? 3 : d->fmove > 0.0f ? 1 : 0)<<4)
+            | ((d->fstrafe < 0.0f ? 3 : d->fstrafe > 0.0f ? 1 : 0)<<6);
         q.put(physstate);
         ivec o = ivec(vec(d->o.x, d->o.y, d->o.z-d->eyeheight).mul(DMF));
         uint vel = min(int(d->vel.magnitude()*DVELF), 0xFFFF);
@@ -1116,8 +1120,8 @@ namespace game
                 d->yaw = yaw;
                 d->pitch = pitch;
                 d->roll = roll;
-                d->move = (physstate>>4)&2 ? -1 : (physstate>>4)&1;
-                d->strafe = (physstate>>6)&2 ? -1 : (physstate>>6)&1;
+                d->fmove = (physstate>>4)&2 ? -1.0f : (physstate>>4)&1 ? 1.0f : 0.0f;
+                d->fstrafe = (physstate>>6)&2 ? -1.0f : (physstate>>6)&1 ? 1.0f : 0.0f;
                 d->jumping = (flags >> 4) & 3;
                 d->phystrails = (flags >> 6) & 1;
                 vec oldpos(d->o);

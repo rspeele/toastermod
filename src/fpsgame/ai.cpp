@@ -1102,7 +1102,7 @@ namespace ai
         }
         else d->ai->becareful = false;
 
-        if(d->ai->dontmove) d->move = d->strafe = 0;
+        if(d->ai->dontmove) d->fmove = d->fstrafe = 0.0f;
         else
         { // our guys move one way.. but turn another?! :)
             const struct aimdir { int move, strafe, offset; } aimdirs[8] =
@@ -1121,8 +1121,8 @@ namespace ai
             while(yaw >= 360.0f) yaw -= 360.0f;
             int r = clamp(((int)floor((yaw+22.5f)/45.0f))&7, 0, 7);
             const aimdir &ad = aimdirs[r];
-            d->move = ad.move;
-            d->strafe = ad.strafe;
+            d->fmove = ad.move;
+            d->fstrafe = ad.strafe;
         }
         findorientation(dp, d->yaw, d->pitch, d->ai->target);
         return result;
@@ -1250,7 +1250,7 @@ namespace ai
             if(d->ragdoll) moveragdoll(d);
             else if(lastmillis-d->lastpain<2000)
             {
-                d->move = d->strafe = 0;
+                d->fmove = d->fstrafe = 0.0f;
                 moveplayer(d, 10, false);
             }
         }

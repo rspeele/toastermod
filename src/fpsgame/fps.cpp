@@ -259,7 +259,7 @@ namespace game
                 if(player1->ragdoll) moveragdoll(player1);
                 else if(lastmillis-player1->lastpain<2000)
                 {
-                    player1->move = player1->strafe = 0;
+                    player1->fmove = player1->fstrafe = 0.0f;
                     moveplayer(player1, 10, true);
                 }
             }
@@ -512,8 +512,8 @@ namespace game
     ICOMMANDN(hud:maxammo, hudp_maxammo, "i", (int *i), if(*i >= GUN_SG && *i <= GUN_PISTOL) intret(itemstats[*i - GUN_SG].max));
     ICOMMANDN(hud:gun, hudp_gun, "", (), intret(hudplayer()->gunselect));
     ICOMMANDN(hud:speed, hudp_speed, "", (), intret(hudplayer()->vel.magnitude2()));
-    ICOMMANDN(hud:move, hudp_move, "", (), intret(hudplayer()->move));
-    ICOMMANDN(hud:strafe, hudp_strafe, "", (), intret(hudplayer()->strafe));
+    ICOMMANDN(hud:move, hudp_move, "", (), intret(hudplayer()->fmove < 0.0f ? -1 : hudplayer()->fmove > 0.0f ? 1 : 0));
+    ICOMMANDN(hud:strafe, hudp_strafe, "", (), intret(hudplayer()->fstrafe < 0.0f ? -1 : hudplayer()->fstrafe > 0.0f ? 1 : 0));
     ICOMMANDN(hud:jumping, hudp_jumping, "", (), intret(hudplayer()->jumping));
     ICOMMANDN(hud:attacking, hudp_attacking, "", (), intret(hudplayer()->attacking));
     ICOMMANDN(hud:broadcast, hudp_broadcast, "", (), result(currentbroadcast()));
@@ -584,7 +584,7 @@ namespace game
         }
         else
         {
-            d->move = d->strafe = 0;
+            d->fmove = d->fstrafe = 0.0f;
             d->resetinterp();
             d->smoothmillis = 0;
             playsound(S_DIE1+rnd(2), &d->o);

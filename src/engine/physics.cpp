@@ -1247,7 +1247,7 @@ bool trystepdown(physent *d, vec &dir, float step, float xy, float z, bool init 
 
 bool trystepdown(physent *d, vec &dir, bool init = false)
 {
-    if((!d->move && !d->strafe) || !game::allowmove(d)) return false;
+    if(!d->tryingtomove() || !game::allowmove(d)) return false;
     vec old(d->o);
     d->o.z -= STAIRHEIGHT;
     d->zmargin = -STAIRHEIGHT;
@@ -1750,9 +1750,9 @@ void modifyvelocity(physent *pl, bool local, bool water, bool floating, int curt
     if(!floating && pl->physstate == PHYS_FALL) pl->timeinair += curtime;
 
     vec m(0.0f, 0.0f, 0.0f);
-    if((pl->move || pl->strafe) && allowmove)
+    if(pl->tryingtomove() && allowmove)
     {
-        vecfromyawpitch(pl->yaw, floating || water || pl->type==ENT_CAMERA ? pl->pitch : 0, pl->move, pl->strafe, m);
+        vecfromyawpitch(pl->yaw, floating || water || pl->type==ENT_CAMERA ? pl->pitch : 0, pl->fmove, pl->fstrafe, m);
 
         if(!floating && pl->physstate >= PHYS_SLOPE)
         {
@@ -1781,7 +1781,7 @@ void modifygravity(physent *pl, bool water, int curtime)
         g.normalize();
         g.mul(grav*secs);
     }
-    if(!water || !game::allowmove(pl) || (!pl->move && !pl->strafe)) pl->vel.add(g);
+    if(!water || !game::allowmove(pl) || !pl->tryingtomove()) pl->vel.add(g);
 }
 
 // main physics routine, moves a player/monster for a curtime step
@@ -1833,7 +1833,7 @@ bool moveplayer(physent *pl, int moveres, bool local, int curtime)
 
     // automatically apply smooth roll when strafing
 
-    if(pl->strafe && maxroll) pl->roll = clamp(pl->roll - pow(clamp(1.0f + pl->strafe*pl->roll/maxroll, 0.0f, 1.0f), 0.33f)*pl->strafe*curtime*straferoll, -maxroll, maxroll);
+    if(pl->fstrafe && maxroll) pl->roll = clamp(pl->roll - pow(clamp(1.0f + pl->fstrafe*pl->roll/maxroll, 0.0f, 1.0f), 0.33f)*pl->fstrafe*curtime*straferoll, -maxroll, maxroll);
     else pl->roll *= curtime == PHYSFRAMETIME ? faderoll : pow(faderoll, curtime/float(PHYSFRAMETIME));
 
     // play sounds on water transitions
@@ -1894,12 +1894,12 @@ void showphystrails(physent *pl, vec &prevpos)
         if(lastmillis - pl->lasttrail.value.millis > 25)
         {
             int strafecolor =
-                pl->strafe > 0 ? 0xFF0000
-                : pl->strafe < 0 ? 0x0000FF
+                pl->fstrafe > 0.0f ? 0xFF0000
+                : pl->fstrafe < 0.0f ? 0x0000FF
                 : 0x000000;
             int movecolor =
-                pl->move > 0 ? 0x00FF00
-                : pl->move < 0 ? 0x007F00
+                pl->fmove > 0.0f ? 0x00FF00
+                : pl->fmove < 0.0f ? 0x007F00
                 : 0x000000;
             int trailcolor = strafecolor | movecolor;
             if (!trailcolor) trailcolor = 0xFFFFFF;
@@ -2163,10 +2163,10 @@ bool moveplatform(physent *p, const vec &dir)
 
 #define dir(name,v,d,s,os) ICOMMAND(name, "D", (int *down), { player->s = *down!=0; player->v = player->s ? d : (player->os ? -(d) : 0); });
 
-dir(backward, move,   -1, k_down,  k_up);
-dir(forward,  move,    1, k_up,    k_down);
-dir(left,     strafe,  1, k_left,  k_right);
-dir(right,    strafe, -1, k_right, k_left);
+dir(backward, fmove,   -1.0f, k_down,  k_up);
+dir(forward,  fmove,    1.0f, k_up,    k_down);
+dir(left,     fstrafe,  1.0f, k_left,  k_right);
+dir(right,    fstrafe, -1.0f, k_right, k_left);
 
 ICOMMAND(jump,   "D", (int *down), { if(!*down || game::canjump()) player->jumping = *down ? JUMP_PENDING : JUMP_NONE; });
 ICOMMAND(attack, "D", (int *down), { game::doattack(*down!=0); });
