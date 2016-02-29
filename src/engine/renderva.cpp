@@ -396,8 +396,10 @@ static inline bool insideoe(const octaentities *oe, const vec &v, int margin = 1
            v.x<=oe->bbmax.x+margin && v.y<=oe->bbmax.y+margin && v.z<=oe->bbmax.z+margin;
 }
 
-void findvisiblemms(const vector<extentity *> &ents)
+void findvisiblemms(const vector<extentity *> &ents, bool doquery)
 {
+    visiblemms = NULL;
+    lastvisiblemms = &visiblemms;
     for(vtxarray *va = visibleva; va; va = va->next)
     {
         if(va->mapmodels.empty() || va->curvfc >= VFC_FOGGED || va->occluded >= OCCLUDE_BB) continue;
@@ -406,7 +408,7 @@ void findvisiblemms(const vector<extentity *> &ents)
             octaentities *oe = va->mapmodels[i];
             if(isfoggedcube(oe->o, oe->size) || pvsoccluded(oe->bbmin, oe->bbmax)) continue;
 
-            bool occluded = oe->query && oe->query->owner == oe && checkquery(oe->query);
+            bool occluded = doquery && oe->query && oe->query->owner == oe && checkquery(oe->query);
             if(occluded)
             {
                 oe->distance = -1;
@@ -506,14 +508,10 @@ void renderreflectedmapmodels()
 
 void rendermapmodels()
 {
-    const vector<extentity *> &ents = entities::getents();
-
-    visiblemms = NULL;
-    lastvisiblemms = &visiblemms;
-    findvisiblemms(ents);
-
     static int skipoq = 0;
-    bool doquery = oqfrags && oqmm;
+    bool doquery = !drawtex && oqfrags && oqmm;
+    const vector<extentity *> &ents = entities::getents();
+    findvisiblemms(ents, doquery);
 
     startmodelbatches();
     for(octaentities *oe = visiblemms; oe; oe = oe->next) if(oe->distance>=0)
@@ -822,7 +820,6 @@ void renderdepthobstacles(const vec &bbmin, const vec &bbmax, float scale, float
 
 VAR(oqdist, 0, 256, 1024);
 VAR(zpass, 0, 1, 1);
-VAR(glowpass, 0, 1, 1);
 VAR(envpass, 0, 1, 1);
 
 struct renderstate
@@ -1423,7 +1420,7 @@ void loadcaustics(bool force)
     if(caustictex[0]) return;
     loopi(NUMCAUSTICS)
     {
-        defformatstring(name, "<grey><mad:-0.6,0.6>packages/caustics/caust%.2d.png", i);
+        defformatstring(name, "<grey><noswizzle>packages/caustics/caust%.2d.png", i);
         caustictex[i] = textureload(name);
     }
 }
@@ -1439,6 +1436,7 @@ void cleanupva()
 
 VARR(causticscale, 0, 50, 10000);
 VARR(causticmillis, 0, 75, 1000);
+FVARR(causticcontrast, 0, 0.6f, 1);
 VARFP(caustics, 0, 1, 1, loadcaustics());
 
 void setupcaustics(float blend)
@@ -1457,7 +1455,8 @@ void setupcaustics(float blend)
     SETSHADER(caustic);
     LOCALPARAM(texgenS, s);
     LOCALPARAM(texgenT, t);
-    LOCALPARAMF(frameoffset, blend*(1-frac), blend*frac, blend);
+    blend *= causticcontrast;
+    LOCALPARAMF(frameblend, blend*(1-frac), blend*frac, blend, 1 - blend);
 }
 
 void setupgeom(renderstate &cur)
@@ -1678,7 +1677,7 @@ void rendergeom(float causticspass, bool fogpass)
         glEnable(GL_BLEND);
 
         setupcaustics(causticspass);
-        glBlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
+        glBlendFunc(GL_ZERO, GL_SRC_COLOR);
         if(fading) glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_FALSE);
         rendergeommultipass(cur, RENDERPASS_CAUSTICS, fogpass);
         if(fading) glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
