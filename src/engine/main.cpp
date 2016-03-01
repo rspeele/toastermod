@@ -7,6 +7,7 @@ extern void cleargamma();
 void cleanup()
 {
     rawinput::release();
+    joystick::release();
     recorder::stop();
     cleanupserver();
     SDL_ShowCursor(SDL_TRUE);
@@ -949,6 +950,13 @@ void checkinput()
                 if(event.wheel.y > 0) { processkey(-4, true); processkey(-4, false); }
                 else if(event.wheel.y < 0) { processkey(-5, true); processkey(-5, false); }
                 break;
+
+            case SDL_JOYAXISMOTION:
+            case SDL_JOYBALLMOTION:
+            case SDL_JOYHATMOTION:
+            case SDL_JOYBUTTONDOWN:
+            case SDL_JOYBUTTONUP:
+                joystick::handleevent(event);
         }
     }
     if(mousemoved) resetmousemotion();

@@ -107,6 +107,7 @@ CLIENT_OBJS= \
 	engine/physics.o \
 	engine/pvs.o \
 	engine/raw.o \
+	engine/joy.o \
 	engine/rendergl.o \
 	engine/rendermodel.o \
 	engine/renderparticles.o \
@@ -376,6 +377,7 @@ engine/pvs.o: shared/iengine.h shared/igame.h engine/world.h engine/octa.h
 engine/pvs.o: engine/lightmap.h engine/bih.h engine/texture.h engine/model.h
 
 engine/raw.o: engine/engine.h shared/tools.h shared/geom.h
+engine/joy.o: engine/engine.h shared/tools.h shared/geom.h
 
 engine/rendergl.o: engine/engine.h shared/cube.h shared/tools.h shared/geom.h
 engine/rendergl.o: shared/ents.h shared/command.h shared/glexts.h

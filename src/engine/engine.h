@@ -448,6 +448,12 @@ namespace rawinput
     void flush();
 }
 
+namespace joystick
+{
+    void handleevent(const SDL_Event &e);
+    void release();
+}
+
 extern void pushevent(const SDL_Event &e);
 extern bool interceptkey(int sym);
 
