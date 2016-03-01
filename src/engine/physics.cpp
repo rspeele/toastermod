@@ -1619,6 +1619,34 @@ void vecfromyawpitch(float yaw, float pitch, int move, int strafe, vec &m)
     }
 }
 
+void vecfrommovement(float yaw, float pitch, float move, float strafe, vec &m)
+{
+    if(move)
+    {
+        m.x = move*-sinf(RAD*yaw);
+        m.y = move*cosf(RAD*yaw);
+    }
+    else m.x = m.y = 0;
+
+    if(pitch)
+    {
+        m.x *= cosf(RAD*pitch);
+        m.y *= cosf(RAD*pitch);
+        m.z = move*sinf(RAD*pitch);
+    }
+    else m.z = 0;
+
+    if(strafe)
+    {
+        m.x += strafe*cosf(RAD*yaw);
+        m.y += strafe*sinf(RAD*yaw);
+    }
+
+    const float mag = m.magnitude();
+    if (mag > 1.0f) m.mul(1.0f/mag);
+}
+
+
 void vectoyawpitch(const vec &v, float &yaw, float &pitch)
 {
     if(v.iszero()) yaw = pitch = 0;
@@ -1693,8 +1721,10 @@ namespace movement
                 pl->vel.mul(newspeed / speed); // rescale
             }
         }
+        vec wishnorm(wishdir);
+        wishnorm.normalize();
         const float wish = pl->maxspeed;
-        const float current = m.vertical ? pl->vel.dot(wishdir) : pl->vel.dot2(wishdir);
+        const float current = m.vertical ? pl->vel.dot(wishnorm) : pl->vel.dot2(wishnorm);
         const float floatfac = floating ? floatspeed / 100.0f : 1.0f;
         const float add = wish * floatfac * m.speed - current; // scale maxspeed according to moveattrs
         const float accelfac = m.acceleration;
@@ -1752,7 +1782,13 @@ void modifyvelocity(physent *pl, bool local, bool water, bool floating, int curt
     vec m(0.0f, 0.0f, 0.0f);
     if(pl->tryingtomove() && allowmove)
     {
-        vecfromyawpitch(pl->yaw, floating || water || pl->type==ENT_CAMERA ? pl->pitch : 0, pl->fmove, pl->fstrafe, m);
+        vecfrommovement
+            ( pl->yaw
+            , floating || water || pl->type==ENT_CAMERA ? pl->pitch : 0
+            , pl->fmove
+            , pl->fstrafe
+            , m
+            );
 
         if(!floating && pl->physstate >= PHYS_SLOPE)
         {
@@ -1762,8 +1798,6 @@ void modifyvelocity(physent *pl, bool local, bool water, bool floating, int curt
             float dz = -(m.x*pl->floor.x + m.y*pl->floor.y)/pl->floor.z;
             m.z = water ? max(m.z, dz) : dz;
         }
-
-        m.normalize();
     }
     movement::accelfric(pl, m, floating, curtime);
 }

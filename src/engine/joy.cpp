@@ -5,7 +5,15 @@ namespace joystick
     int activeindex = -1;
     SDL_Joystick *stick = NULL;
 
-    void acquire(int joystickindex)
+    enum
+    {
+        AXIS_X = 0, // left/right lean
+        AXIS_Y, // forward/back lean
+        AXIS_Z // throttle
+    };
+    const float axismax = 32767.5f;
+
+    void acquire(const int joystickindex)
     {
         if (!isenabled)
         {
@@ -59,7 +67,7 @@ namespace joystick
         }
     }
 
-    void setenabled(int joystickindex)
+    void setenabled(const int joystickindex)
     {
         if (joystickindex == activeindex) return;
         if (joystickindex >= 0)
@@ -72,9 +80,23 @@ namespace joystick
         }
     }
 
+    float axis(const int value)
+    {
+        const float scaled = -value / axismax;
+        return scaled;
+    }
+
     void handleaxis(const SDL_JoyAxisEvent &e)
     {
-        conoutf("Axis %d value %d", e.axis, e.value);
+        switch (e.axis)
+        {
+        case AXIS_X:
+            player->fstrafe = clamp(axis(e.value), -1.0f, 1.0f);
+            break;
+        case AXIS_Y:
+            player->fmove = clamp(axis(e.value), -1.0f, 1.0f);
+            break;
+        }
     }
 
     void handleevent(const SDL_Event &e)
