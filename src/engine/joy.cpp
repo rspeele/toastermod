@@ -14,6 +14,7 @@ namespace joystick
     const float axismax = 32767.5f;
     const int buttonsym = -100;
     const int hatsym = -200;
+    const int hatlimit = 4;
 
     void acquire(const int joystickindex)
     {
@@ -101,10 +102,49 @@ namespace joystick
         }
     }
 
+    int buttonsymbol(Uint8 sdlJoyButton)
+    {
+        if (sdlJoyButton >= buttonsym - hatsym)
+        {
+            conoutf(CON_ERROR, "Unsupported joystick button %d", sdlJoyButton);
+            return 0;
+        }
+        return buttonsym - sdlJoyButton;
+    }
+
     void handlebutton(const SDL_JoyButtonEvent &e)
     {
-        int symbol = buttonsym - e.button;
-        processkey(symbol, e.state == SDL_PRESSED);
+        int symbol = buttonsymbol(e.button);
+        if (symbol)
+        {
+            processkey(symbol, e.state == SDL_PRESSED);
+        }
+    }
+
+    void handlehat(const SDL_JoyHatEvent &e)
+    {
+        static int hatstates[hatlimit] =
+            { SDL_HAT_CENTERED, SDL_HAT_CENTERED, SDL_HAT_CENTERED, SDL_HAT_CENTERED };
+        if (e.hat >= hatlimit)
+        {
+            conoutf(CON_ERROR, "Unsupported joystick hat %d", e.hat);
+            return;
+        }
+        const int current = e.value;
+        const int previous = hatstates[e.hat];
+
+        static const int dirs[4] =
+            { SDL_HAT_UP, SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT };
+        for (int i = 0; i < 4; i++)
+        {
+            const int dir = dirs[i];
+            if ((previous & dir) != (current & dir))
+            {
+                int sym = hatsym - e.hat * 4 - i;
+                processkey(sym, current & dir);
+            }
+        }
+        hatstates[e.hat] = current;
     }
 
     void handleevent(const SDL_Event &e)
@@ -118,6 +158,8 @@ namespace joystick
         case SDL_JOYBUTTONUP:
             handlebutton(e.jbutton);
             break;
+        case SDL_JOYHATMOTION:
+            handlehat(e.jhat);
         }
     }
 
