@@ -1061,6 +1061,46 @@ namespace game
         }
     }
 
+    VARP(showphyscompass, 0, 0, 1);
+
+    void drawphyscompassvector(const bvec &color, const float yaw, const float magnitude)
+    {
+        pushhudmatrix();
+        hudmatrix.rotate_around_z(yaw);
+        flushhudmatrix();
+        gle::defvertex(2);
+        gle::color(color, 0xff);
+        gle::begin(GL_TRIANGLE_STRIP);
+        const float w = 10.0f, h = magnitude * 150.0f;
+        const float x = -0.5f * w, y = 0.0f;
+        gle::attribf(x    , y);
+        gle::attribf(x + w, y);
+        gle::attribf(x    , y + h);
+        gle::attribf(x + w, y + h);
+        gle::end();
+        pophudmatrix();
+    }
+
+    void drawphyscompass(fpsent *d, int w, int h)
+    {
+        enabletexture(false);
+        pushhudmatrix();
+        hudmatrix.translate(vec(900.0f, 1600.0f, 0.0f));
+        hudmatrix.rotate_around_z(90.0f * RAD);
+        flushhudmatrix();
+
+        const float inputyaw = atan2f(d->fmove, d->fstrafe);
+        const float inputmag = min(1.0f, vec2(d->fmove, d->fstrafe).magnitude());
+        drawphyscompassvector(bvec(0xff, 0x00, 0x00), inputyaw, inputmag);
+
+        const float velyaw = atan2f(d->vel.y, d->vel.x) - d->yaw*RAD;
+        const float velmag = min(3.0f, d->vel.magnitude2() / d->maxspeed);
+        drawphyscompassvector(bvec(0xff, 0xff, 0xff), velyaw, velmag);
+
+        pophudmatrix();
+        enabletexture(true);
+    }
+
     void gameplayhud(int w, int h)
     {
         if(*customhud)
@@ -1122,6 +1162,7 @@ namespace game
         fpsent *d = hudplayer();
         if(d->state!=CS_EDITING)
         {
+            if(showphyscompass) drawphyscompass(d, w, h);
             if(!*customhud && d->state!=CS_SPECTATOR) drawhudicons(d);
             if(cmode) cmode->drawhud(d, w, h);
         }
