@@ -12,6 +12,8 @@ namespace joystick
         AXIS_Z // throttle
     };
     const float axismax = 32767.5f;
+    const int buttonsym = -100;
+    const int hatsym = -200;
 
     void acquire(const int joystickindex)
     {
@@ -99,6 +101,12 @@ namespace joystick
         }
     }
 
+    void handlebutton(const SDL_JoyButtonEvent &e)
+    {
+        int symbol = buttonsym - e.button;
+        processkey(symbol, e.state == SDL_PRESSED);
+    }
+
     void handleevent(const SDL_Event &e)
     {
         switch (e.type)
@@ -108,6 +116,7 @@ namespace joystick
             break;
         case SDL_JOYBUTTONDOWN:
         case SDL_JOYBUTTONUP:
+            handlebutton(e.jbutton);
             break;
         }
     }
