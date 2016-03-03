@@ -1085,7 +1085,7 @@ namespace game
     {
         enabletexture(false);
         pushhudmatrix();
-        hudmatrix.translate(vec(900.0f, 1600.0f, 0.0f));
+        hudmatrix.translate(vec(400.0f, 1400.0f, 0.0f));
         hudmatrix.rotate_around_z(90.0f * RAD);
         flushhudmatrix();
 
