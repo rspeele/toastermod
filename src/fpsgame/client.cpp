@@ -923,12 +923,10 @@ namespace game
     {
         putint(q, N_POS);
         putuint(q, d->clientnum);
-        // 3 bits phys state, 1 bit life sequence, 2 bits move, 2 bits strafe
+        // 3 bits phys state, 1 bit life sequence, 4 bits unused
         uchar physstate
             = d->physstate
-            | ((d->lifesequence&1)<<3)
-            | ((d->fmove < 0.0f ? 3 : d->fmove > 0.0f ? 1 : 0)<<4)
-            | ((d->fstrafe < 0.0f ? 3 : d->fstrafe > 0.0f ? 1 : 0)<<6);
+            | ((d->lifesequence&1)<<3);
         q.put(physstate);
         ivec o = ivec(vec(d->o.x, d->o.y, d->o.z-d->eyeheight).mul(DMF));
         uint vel = min(int(d->vel.magnitude()*DVELF), 0xFFFF);
@@ -959,6 +957,8 @@ namespace game
         uint veldir = (velyaw < 0 ? 360 + int(velyaw)%360 : int(velyaw)%360) + clamp(int(velpitch+90), 0, 180)*360;
         q.put(veldir&0xFF);
         q.put((veldir>>8)&0xFF);
+        putint(q, int(d->fmove * DNF));
+        putint(q, int(d->fstrafe * DNF));
     }
 
     void sendposition(fpsent *d, bool reliable)
@@ -1111,6 +1111,9 @@ namespace game
                 roll = clamp(int(p.get()), 0, 180)-90;
                 int mag = p.get(); if(flags&(1<<3)) mag |= p.get()<<8;
                 dir = p.get(); dir |= p.get()<<8;
+                float fmove = getint(p) / DNF;
+                float fstrafe = getint(p) / DNF;
+
                 vecfromyawpitch(dir%360, clamp(dir/360, 0, 180)-90, 1, 0, vel);
                 vel.mul(mag/DVELF);
                 int seqcolor = (physstate>>3)&1;
@@ -1120,10 +1123,10 @@ namespace game
                 d->yaw = yaw;
                 d->pitch = pitch;
                 d->roll = roll;
-                d->fmove = (physstate>>4)&2 ? -1.0f : (physstate>>4)&1 ? 1.0f : 0.0f;
-                d->fstrafe = (physstate>>6)&2 ? -1.0f : (physstate>>6)&1 ? 1.0f : 0.0f;
                 d->jumping = (flags >> 4) & 3;
                 d->phystrails = (flags >> 6) & 1;
+                d->fmove = fmove;
+                d->fstrafe = fstrafe;
                 vec oldpos(d->o);
                 if(allowmove(d))
                 {
