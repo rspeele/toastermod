@@ -376,6 +376,7 @@ extern void dropenttofloor(entity *e);
 extern bool droptofloor(vec &o, float radius, float height);
 
 extern void vecfromyawpitch(float yaw, float pitch, int move, int strafe, vec &m);
+extern void vecfrommovement(float yaw, float pitch, float move, float strafe, vec &m);
 extern void vectoyawpitch(const vec &v, float &yaw, float &pitch);
 extern bool moveplatform(physent *p, const vec &dir);
 extern void updatephysstate(physent *d);
