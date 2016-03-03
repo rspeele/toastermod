@@ -1063,7 +1063,7 @@ namespace game
 
     VARP(showphyscompass, 0, 0, 1);
 
-    void drawphyscompassvector(const bvec &color, const float yaw, const float magnitude)
+    void drawphyscompassvector(const bvec &color, float w, float yaw, float magnitude)
     {
         pushhudmatrix();
         hudmatrix.rotate_around_z(yaw);
@@ -1071,7 +1071,7 @@ namespace game
         gle::defvertex(2);
         gle::color(color, 0xff);
         gle::begin(GL_TRIANGLE_STRIP);
-        const float w = 10.0f, h = magnitude * 150.0f;
+        const float h = magnitude * 150.0f;
         const float x = -0.5f * w, y = 0.0f;
         gle::attribf(x    , y);
         gle::attribf(x + w, y);
@@ -1089,13 +1089,13 @@ namespace game
         hudmatrix.rotate_around_z(90.0f * RAD);
         flushhudmatrix();
 
-        const float inputyaw = atan2f(d->fmove, d->fstrafe);
-        const float inputmag = min(1.0f, vec2(d->fmove, d->fstrafe).magnitude());
-        drawphyscompassvector(bvec(0xff, 0x00, 0x00), inputyaw, inputmag);
-
         const float velyaw = atan2f(d->vel.y, d->vel.x) - d->yaw*RAD;
         const float velmag = min(3.0f, d->vel.magnitude2() / d->maxspeed);
-        drawphyscompassvector(bvec(0xff, 0xff, 0xff), velyaw, velmag);
+        drawphyscompassvector(bvec(0xff, 0xff, 0xff), 10.0f, velyaw, velmag);
+
+        const float inputyaw = atan2f(d->fmove, d->fstrafe);
+        const float inputmag = min(1.0f, vec2(d->fmove, d->fstrafe).magnitude());
+        drawphyscompassvector(bvec(0xff, 0x00, 0x00), 5.0f, inputyaw, inputmag);
 
         pophudmatrix();
         enabletexture(true);
