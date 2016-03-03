@@ -1619,6 +1619,9 @@ void vecfromyawpitch(float yaw, float pitch, int move, int strafe, vec &m)
     }
 }
 
+FVARP(joyminthreshold, 0.0f, 0.05f, 1.0f);
+FVARP(joymaxthreshold, 0.0f, 1.0f, 1.0f);
+
 void vecfrommovement(float yaw, float pitch, float move, float strafe, vec &m)
 {
     if(move)
@@ -1643,7 +1646,15 @@ void vecfrommovement(float yaw, float pitch, float move, float strafe, vec &m)
     }
 
     const float mag = m.magnitude();
-    if (mag > 1.0f) m.mul(1.0f/mag);
+    if (mag <= joyminthreshold || joyminthreshold >= joymaxthreshold)
+    {
+        m = vec(0.0f);
+        return;
+    }
+    const float scaledmag =
+        (mag - joyminthreshold)
+        / (joymaxthreshold - joyminthreshold);
+    m.mul(min(1.0f, scaledmag) / mag);
 }
 
 
