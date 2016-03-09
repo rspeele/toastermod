@@ -65,7 +65,25 @@ struct fpsentity : extentity
     fpsentity() : triggerstate(TRIGGER_RESET), lasttrigger(0) {} 
 };
 
-enum { GUN_FIST = 0, GUN_SG, GUN_CG, GUN_RL, GUN_RIFLE, GUN_GL, GUN_PISTOL, GUN_FIREBALL, GUN_ICEBALL, GUN_SLIMEBALL, GUN_BITE, GUN_BARREL, NUMGUNS };
+enum
+{
+    GUN_FIST = 0,
+    GUN_SG,
+    GUN_CG,
+    GUN_RL,
+    GUN_RIFLE,
+    GUN_GL,
+    GUN_PISTOL,
+    GUN_HARPOON,
+    NUMPLAYERGUNS,
+    GUN_FIREBALL,
+    GUN_ICEBALL,
+    GUN_SLIMEBALL,
+    GUN_BITE,
+    GUN_BARREL,
+    NUMGUNS
+};
+
 #define validgun(g) (*i >= GUN_FIST && *i < NUMGUNS)
 enum { A_BLUE, A_GREEN, A_YELLOW };     // armour types...
 #define armourinfo(a) ((a+1.0f)*0.25f)
@@ -314,6 +332,7 @@ enum
     HICON_RIFLE,
     HICON_GL,
     HICON_PISTOL,
+    HICON_HARPOON = HICON_PISTOL,
 
     HICON_QUAD,
 
@@ -339,11 +358,12 @@ static struct itemstat { int add, max, sound; const char *name; int icon, info; 
     {5,     15,    S_ITEMAMMO,   "RI", HICON_RIFLE, GUN_RIFLE},
     {10,    30,    S_ITEMAMMO,   "GL", HICON_GL, GUN_GL},
     {18,    60,    S_ITEMAMMO,   "PI", HICON_PISTOL, GUN_PISTOL},
+    {10,    30,    S_ITEMAMMO,   "HP", HICON_HARPOON, GUN_HARPOON },
     {25,    100,   S_ITEMHEALTH, "H",  HICON_HEALTH},
     {30000, 60000, S_ITEMHEALTH, "MH", HICON_HEALTH},
     {75,    150,   S_ITEMARMOUR, "GA", HICON_GREEN_ARMOUR, A_GREEN},
     {150,   200,   S_ITEMARMOUR, "YA", HICON_YELLOW_ARMOUR, A_YELLOW},
-    {20000, 30000, S_ITEMPUP,    "Q", HICON_QUAD},
+    {20000, 30000, S_ITEMPUP,    "Q",  HICON_QUAD},
 };
 
 #define MAXRAYS 25
@@ -473,6 +493,18 @@ struct pistolinfo : guninfo
         file = "pistol";
     }
 };
+struct harpooninfo : guninfo
+{
+    harpooninfo()
+    {
+        sound = S_RIFLE;
+        attackdelay = 1000;
+        damage = 70, bonus = 30;
+        hitpush = 250;
+        name = "harpoon";
+        file = "rifle";
+    }
+};
 static const guninfo guns[NUMGUNS] =
 {
     chainsawinfo(),
@@ -481,7 +513,8 @@ static const guninfo guns[NUMGUNS] =
     rlinfo(),
     rifleinfo(),
     glinfo(),
-    pistolinfo()
+    pistolinfo(),
+    harpooninfo()
 };
 
 #include "ai.h"
@@ -694,7 +727,7 @@ struct fpsstate
         {
             armourtype = A_YELLOW;
             armour = 125;
-            loopi(6) baseammo(i+1);
+            loopi(NUMPLAYERGUNS-1) baseammo(i+1);
             gunselect = GUN_CG;
         }
         else if(m_ctf || m_collect)

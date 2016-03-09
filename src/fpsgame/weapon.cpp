@@ -57,7 +57,7 @@ namespace game
 
     int getweapon(const char *name)
     {
-        const char *abbrevs[] = { "FI", "SG", "CG", "RL", "RI", "GL", "PI" };
+        const char *abbrevs[] = { "FI", "SG", "CG", "RL", "RI", "GL", "PI", "HP" };
         if(isdigit(name[0])) return parseint(name);
         else loopi(sizeof(abbrevs)/sizeof(abbrevs[0])) if(!strcasecmp(abbrevs[i], name)) return i;
         return -1;
@@ -66,7 +66,7 @@ namespace game
     void setweapon(const char *name, bool force = false)
     {
         int gun = getweapon(name);
-        if(player1->state!=CS_ALIVE || gun<GUN_FIST || gun>GUN_PISTOL) return;
+        if(player1->state!=CS_ALIVE || gun<GUN_FIST || gun>=NUMPLAYERGUNS) return;
         if(force || player1->hasammo(gun)) gunselect(gun, player1);
         else playsound(S_NOAMMO);
     }
@@ -106,6 +106,7 @@ namespace game
         else if(s!=GUN_RIFLE  && d->hasammo(GUN_RIFLE))  s = GUN_RIFLE;
         else if(s!=GUN_GL     && d->hasammo(GUN_GL))     s = GUN_GL;
         else if(s!=GUN_PISTOL && d->hasammo(GUN_PISTOL)) s = GUN_PISTOL;
+        else if(s!=GUN_HARPOON&& d->hasammo(GUN_HARPOON))s = GUN_HARPOON;
         else                                          s = GUN_FIST;
 
         gunselect(s, d);
@@ -120,7 +121,7 @@ namespace game
             if(name[0])
             {
                 int gun = getweapon(name);
-                if(gun >= GUN_FIST && gun <= GUN_PISTOL && gun != player1->gunselect && player1->hasammo(gun)) { gunselect(gun, player1); return; }
+                if(gun >= GUN_FIST && gun < NUMPLAYERGUNS && gun != player1->gunselect && player1->hasammo(gun)) { gunselect(gun, player1); return; }
             } else { weaponswitch(player1); return; }
         }
         playsound(S_NOAMMO);
@@ -656,6 +657,7 @@ namespace game
 
             case GUN_CG:
             case GUN_PISTOL:
+            case GUN_HARPOON:
             {
                 particle_splash(PART_SPARK, 200, 250, to, 0xB49B4B, 0.24f);
                 particle_flare(hudgunorigin(gun, from, to, d), to, 100, PART_STREAK, 0xFFC864, 0.28f);

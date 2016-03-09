@@ -142,9 +142,9 @@ namespace game
             delay = 1000;
         }
         modelattach a[5];
-        static const char * const vweps[] = {"vwep/fist", "vwep/shotg", "vwep/chaing", "vwep/rocket", "vwep/rifle", "vwep/gl", "vwep/pistol"};
+        static const char * const vweps[] = {"vwep/fist", "vwep/shotg", "vwep/chaing", "vwep/rocket", "vwep/rifle", "vwep/gl", "vwep/pistol", "vwep/rifle"};
         int ai = 0;
-        if((!mdl.vwep || d->gunselect!=GUN_FIST) && d->gunselect<=GUN_PISTOL)
+        if((!mdl.vwep || d->gunselect!=GUN_FIST) && d->gunselect<NUMPLAYERGUNS)
         {
             int vanim = ANIM_VWEP_IDLE|ANIM_LOOP, vtime = 0;
             if(lastaction && d->lastattackgun==d->gunselect && lastmillis < lastaction + delay)
@@ -281,7 +281,7 @@ namespace game
 
     void drawhudmodel(fpsent *d, int anim, float speed = 0, int base = 0)
     {
-        if(d->gunselect>GUN_PISTOL) return;
+        if(d->gunselect>=NUMPLAYERGUNS) return;
 
         vec sway;
         vecfromyawpitch(d->yaw, 0, 0, 1, sway);

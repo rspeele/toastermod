@@ -1895,8 +1895,8 @@ namespace server
         putint(p, gs.armour);
         putint(p, gs.armourtype);
         putint(p, gs.gunselect);
-        loopi(GUN_PISTOL-GUN_SG+1) putint(p, gs.ammo[GUN_SG+i]);
-        loopi(GUN_PISTOL-GUN_SG+1) putint(p, gs.magazine[GUN_SG+i]);
+        loopi(NUMPLAYERGUNS-GUN_SG) putint(p, gs.ammo[GUN_SG+i]);
+        loopi(NUMPLAYERGUNS-GUN_SG) putint(p, gs.magazine[GUN_SG+i]);
     }
 
     void spawnstate(clientinfo *ci)
@@ -1916,8 +1916,8 @@ namespace server
               gs.health, gs.maxhealth,
               gs.armour, gs.armourtype,
               gs.gunselect,
-              GUN_PISTOL-GUN_SG+1, &gs.ammo[GUN_SG],
-              GUN_PISTOL-GUN_SG+1, &gs.magazine[GUN_SG]);
+              NUMPLAYERGUNS-GUN_SG, &gs.ammo[GUN_SG],
+              NUMPLAYERGUNS-GUN_SG, &gs.magazine[GUN_SG]);
         gs.lastspawn = gamemillis;
     }
 
@@ -2107,8 +2107,8 @@ namespace server
               gs.health, gs.maxhealth,
               gs.armour, gs.armourtype,
               gs.gunselect,
-              GUN_PISTOL-GUN_SG+1, &gs.ammo[GUN_SG],
-              GUN_PISTOL-GUN_SG+1, &gs.magazine[GUN_SG],
+              NUMPLAYERGUNS-GUN_SG, &gs.ammo[GUN_SG],
+              NUMPLAYERGUNS-GUN_SG, &gs.magazine[GUN_SG],
               -1);
     }
 
@@ -2539,7 +2539,7 @@ namespace server
         int wait = millis - gs.lastshot;
         if(!gs.isalive(gamemillis) ||
            wait<gs.gunwait ||
-           gun<GUN_FIST || gun>GUN_PISTOL ||
+           gun<GUN_FIST || gun>=NUMPLAYERGUNS ||
            !gs.ammosource(gun) || (guns[gun].range && from.dist(to) > guns[gun].range + 1))
             return;
         if(gun!=GUN_FIST) gs.ammosource(gun)--;
@@ -3406,7 +3406,7 @@ namespace server
             {
                 int gunselect = getint(p);
                 if(!cq || cq->state.state!=CS_ALIVE) break;
-                cq->state.gunselect = gunselect >= GUN_FIST && gunselect <= GUN_PISTOL ? gunselect : GUN_FIST;
+                cq->state.gunselect = gunselect >= GUN_FIST && gunselect < NUMPLAYERGUNS ? gunselect : GUN_FIST;
                 QUEUE_AI;
                 QUEUE_MSG;
                 break;
@@ -3419,7 +3419,7 @@ namespace server
                 cq->state.pendingspawn = optional<vec>();
                 cq->state.lastspawn = -1;
                 cq->state.state = CS_ALIVE;
-                cq->state.gunselect = gunselect >= GUN_FIST && gunselect <= GUN_PISTOL ? gunselect : GUN_FIST;
+                cq->state.gunselect = gunselect >= GUN_FIST && gunselect < NUMPLAYERGUNS ? gunselect : GUN_FIST;
                 cq->exceeded = 0;
                 if(smode) smode->spawned(cq);
                 QUEUE_AI;
